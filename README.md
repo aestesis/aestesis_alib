@@ -113,18 +113,6 @@ world.add(light)
 let pointLight = PointLight(position: Vec3(x: 1, y: 2, z: 3), intensity: 2.0)
 world.add(pointLight)
 ```
-
-### Creating Materials
-
-```swift
-// Simple material
-let material = Material(name: "default", albedo: Color.white)
-
-// Material with texture
-let textureMaterial = Material(name: "textured", albedo: Color.red, texture: texture)
-material.materials["default"] = textureMaterial
-```
-
 ---
 
 ## 🎨 Rendering Pipeline

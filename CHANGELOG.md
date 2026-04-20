@@ -67,18 +67,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## Version 1.0.5
-
-### Highlights
-- **Metal Graphics Rendering** - Full GPU acceleration for 3D rendering
-- **Scene Graph** - Hierarchical node-based rendering system
-- **Lighting Engine** - Multiple light sources with material support
-- **Complete Math Library** - Matrix, Vector, Color, Geometry primitives
-- **UI Framework** - Declarative UI with Swift syntax
-- **Performance Optimization** - Object instances, Z-sorting pipeline
-
----
-
 ## [1.0.0] - TBD (Next Release)
 
 ### Planned Features
