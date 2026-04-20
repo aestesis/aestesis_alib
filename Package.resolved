@@ -1,0 +1,15 @@
+{
+  "originHash" : "24e1c80fecb84f72980718834479908a6f94f67a65abbab954011d7f94b3d7fb",
+  "pins" : [
+    {
+      "identity" : "libtess",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/aestesis/libtess.git",
+      "state" : {
+        "revision" : "45e1819be91de0374f0fecfde1f6811a8cb5ee95",
+        "version" : "1.0.5"
+      }
+    }
+  ],
+  "version" : 3
+}
