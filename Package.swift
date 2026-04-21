@@ -24,11 +24,19 @@ let package = Package(
         // Targets can depend on other targets in this package and products from dependencies.
         .target(
             name: "aestesis_alib",
-            dependencies: ["libtess", "shaders"]
+            dependencies: ["libtess"],
+            resources: [
+                .process("shaders/default.metal")
+            ]
         ),
+        /*
         .target(
             name: "shaders",
+            resources: [
+                .process("default.metal")
+            ]
         ),
+        */
         .testTarget(
             name: "aestesis_alibTests",
             dependencies: ["aestesis_alib"]
