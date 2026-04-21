@@ -8,9 +8,9 @@
 
 import Foundation
 
-// https://affiliate.itunes.apple.com/resources/documentation/itunes-store-web-service-search-api/#searchexamples
-
-public class Itunes {
+// Sendable conformance disabled for credentials storage
+// Credentials are set once and only changed via @MainActor
+@_unchecked class Itunes {
     public static var key = ""
     public static var secret = ""
     static let apiSearch="https://itunes.apple.com/search?term="

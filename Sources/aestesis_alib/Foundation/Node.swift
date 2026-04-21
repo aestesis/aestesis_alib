@@ -18,59 +18,63 @@
 //  limitations under the License.
 
 import Foundation
+
 #if os(Linux)
-import Dispatch
+    import Dispatch
 #endif
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-open class Hash : Hashable {
+open class Hash: Hashable {
     public func hash(into hasher: inout Hasher) {
         hasher.combine(ObjectIdentifier(self).hashValue)
     }
 }
-public func ==(lhs: Hash, rhs: Hash) -> Bool {
+public func == (lhs: Hash, rhs: Hash) -> Bool {
     return ObjectIdentifier(lhs) == ObjectIdentifier(rhs)
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-open class Atom: Hash,CustomStringConvertible {
+open class Atom: Hash, CustomStringConvertible, @unchecked Sendable {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public var description : String {
-        let m=Swift.Mirror(reflecting: self)
-        let name=String(describing:m.subjectType)
+    public var description: String {
+        let m = Swift.Mirror(reflecting: self)
+        let name = String(describing: m.subjectType)
         return "{ class:\(name) }"
     }
-#if DEBUG
-    var dbgdesc:String? = nil
-    public var debugDescription : String {
-        if let dd = dbgdesc {
-            return dd
-        } else {
-            let dd = self.className+".init():\r\n"+Thread.callstack.joined(separator:"\r\n")
-            dbgdesc = dd
-            return dd
-        }
-    }
-#endif
-    public var className : String {
-        let m=Swift.Mirror(reflecting: self)
-        return String(describing:m.subjectType)
-    }
-    public func wait(_ duration:Double, _ fn:(()->())? = nil) -> Future {
-        return Atom.wait(duration,fn)
-    }
-    public static func wait(_ duration:Double, _ fn:(()->())? = nil) -> Future {
-        let fut=Future()
-        var cancelled = false
-        DispatchQueue.main.asyncAfter(deadline: .now() + duration, execute: {
-            if !cancelled {
-                fut.done()
+    #if DEBUG
+        var dbgdesc: String? = nil
+        public var debugDescription: String {
+            if let dd = dbgdesc {
+                return dd
+            } else {
+                let dd =
+                    self.className + ".init():\r\n" + Thread.callstack.joined(separator: "\r\n")
+                dbgdesc = dd
+                return dd
             }
-        })
+        }
+    #endif
+    public var className: String {
+        let m = Swift.Mirror(reflecting: self)
+        return String(describing: m.subjectType)
+    }
+    public func wait(_ duration: Double, _ fn: (() -> Void)? = nil) -> Future {
+        return Atom.wait(duration, fn)
+    }
+    public static func wait(_ duration: Double, _ fn: (() -> Void)? = nil) -> Future {
+        let fut = Future()
+        var cancelled = false
+        DispatchQueue.main.asyncAfter(
+            deadline: .now() + duration,
+            execute: {
+                if !cancelled {
+                    fut.done()
+                }
+            })
         fut.onCancel { _ in
             cancelled = true
         }
@@ -79,60 +83,60 @@ open class Atom: Hash,CustomStringConvertible {
         }
         return fut
     }
-    public func main(fn:@escaping ()->()) {
+    public func main(fn: @escaping () -> Void) {
         DispatchQueue.main.async {
             fn()
         }
     }
-    public static func main(fn:@escaping ()->()) {
+    public static func main(fn: @escaping () -> Void) {
         DispatchQueue.main.async {
             fn()
         }
     }
-    public func pulse(_ period:Double,_ tick:@escaping ()->()) -> Future {
-        let fut=Future()
+    public func pulse(_ period: Double, _ tick: @escaping () -> Void) -> Future {
+        let fut = Future()
         DispatchQueue.main.async {
-            let t = Timer(period:period,tick:tick)
-            fut["timer"]=t
+            let t = Timer(period: period, tick: tick)
+            fut["timer"] = t
             fut.onCancel { (p) in
                 t.stop()
-                fut["timer"]=nil
+                fut["timer"] = nil
             }
         }
         return fut
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-/*
-#if DEBUG
-    private static var inspect:[String]=[]   // ex: "Bitmap" "Future"
-    private static let lock=Lock()
-    private static var dbg=[String:Int]()
-    private static var log=[String:Int]()
-#endif
-    public static func debugInfo() {
-#if DEBUG
-        Atom.lock.sync {
-            let keys = Array(dbg.keys).sorted()
-            for k in keys {
-                Debug.info("\(k) ... \(dbg[k] ?? 0)")
-            }
-            var log=[(count:Int,message:String)]()
-            for d in Atom.log {
-                if d.1 > 10 {
-                    log.append((count:d.1,message:d.0))
+    /*
+    #if DEBUG
+        private static var inspect:[String]=[]   // ex: "Bitmap" "Future"
+        private static let lock=Lock()
+        private static var dbg=[String:Int]()
+        private static var log=[String:Int]()
+    #endif
+        public static func debugInfo() {
+    #if DEBUG
+            Atom.lock.sync {
+                let keys = Array(dbg.keys).sorted()
+                for k in keys {
+                    Debug.info("\(k) ... \(dbg[k] ?? 0)")
+                }
+                var log=[(count:Int,message:String)]()
+                for d in Atom.log {
+                    if d.1 > 10 {
+                        log.append((count:d.1,message:d.0))
+                    }
+                }
+                log.sort(by: { (ta, b) -> Bool in
+                    return ta.count > b.count
+                })
+                for l in log {
+                    Debug.info("\(l.count) -> \(l.message)")
                 }
             }
-            log.sort(by: { (ta, b) -> Bool in
-                return ta.count > b.count
-            })
-            for l in log {
-                Debug.info("\(l.count) -> \(l.message)")
-            }
+    #endif
         }
-#endif
-    }
- */
+     */
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public override init() {
@@ -188,37 +192,37 @@ open class Atom: Hash,CustomStringConvertible {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 public struct Classes {
-    var keys=[String]()
-    public mutating func append(key:String) {
-        if(!keys.contains(key)) {
+    var keys = [String]()
+    public mutating func append(key: String) {
+        if !keys.contains(key) {
             keys.append(key)
         }
     }
-    public mutating func append(keys:[String]) {
+    public mutating func append(keys: [String]) {
         for k in keys {
-            self.append(key:k)
+            self.append(key: k)
         }
     }
-    public mutating func append(classes:Classes) {
+    public mutating func append(classes: Classes) {
         self.append(keys: classes.keys)
     }
-    public mutating func remove(key:String) {
-        if let i=keys.firstIndex(of: key) {
+    public mutating func remove(key: String) {
+        if let i = keys.firstIndex(of: key) {
             keys.remove(at: i)
         }
     }
-    public mutating func remove(keys:[String]) {
+    public mutating func remove(keys: [String]) {
         for k in keys {
-            self.remove(key:k)
+            self.remove(key: k)
         }
     }
-    public mutating func remove(classes:Classes) {
-        self.remove(keys: classes.keys);
+    public mutating func remove(classes: Classes) {
+        self.remove(keys: classes.keys)
     }
-    public func contains(key:String) -> Bool {
+    public func contains(key: String) -> Bool {
         return keys.contains(key)
     }
-    public func contains(keys:[String]) -> Bool {
+    public func contains(keys: [String]) -> Bool {
         for k in keys {
             if !keys.contains(k) {
                 return false
@@ -226,8 +230,8 @@ public struct Classes {
         }
         return true
     }
-    public func contains(classes:Classes) -> Bool {
-        return self.contains(keys:classes.keys)
+    public func contains(classes: Classes) -> Bool {
+        return self.contains(keys: classes.keys)
     }
     public init() {
     }
@@ -235,27 +239,26 @@ public struct Classes {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-open class Node:Atom
-{
+open class Node: Atom {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public let onDetach=Event<Void>()
+    public let onDetach = Event<Void>()
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    var prop:SynchronizedDictionnary<String,Any>=SynchronizedDictionnary<String,Any>()
-    public private(set) var classes=Classes()
+    var prop: SynchronizedDictionnary<String, Any> = SynchronizedDictionnary<String, Any>()
+    public private(set) var classes = Classes()
     public var parent: Node?
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public init(parent: Node?) {
         super.init()
-        self.parent=parent
+        self.parent = parent
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public var attached : Bool {
+    public var attached: Bool {
         return self.parent != nil
     }
-    public var detached : Bool {
+    public var detached: Bool {
         return !attached
     }
     public func detach() {
@@ -263,7 +266,7 @@ open class Node:Atom
         onDetach.removeAll()
         self.parent = nil
         for p in prop.values {
-            if let p=p as? Node, p != self && p.parent != nil  {
+            if let p = p as? Node, p != self && p.parent != nil {
                 p.detach()
             }
         }
@@ -273,25 +276,25 @@ open class Node:Atom
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public func ancestor<T>() -> T? {
         if let s = self.parent {
-            if let v=s as? T {
+            if let v = s as? T {
                 return v
             } else {
-                let v:T? = s.ancestor()
+                let v: T? = s.ancestor()
                 return v
             }
         }
         return nil
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public subscript(k:String) -> Any? {
+    public subscript(k: String) -> Any? {
         get {
-            if let v=prop[k] {
+            if let v = prop[k] {
                 if let p = v as? Property {
                     return p.value
                 }
                 return v
             }
-            if let p=parent {
+            if let p = parent {
                 if let v = p[k] {
                     if let p = v as? Property {
                         return p.value
@@ -302,7 +305,7 @@ open class Node:Atom
             return nil
         }
         set(v) {
-            if let p=prop[k] as? Node {
+            if let p = prop[k] as? Node {
                 if let p = p as? Property {
                     p.value = v
                     return
@@ -314,7 +317,7 @@ open class Node:Atom
                     p.detach()
                 }
             }
-            prop[k]=v
+            prop[k] = v
         }
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -323,10 +326,10 @@ open class Node:Atom
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-open class Property : Node {
-    public let onGetValue=Event<Any?>()
-    var _value:Any?
-    public var value : Any? {
+open class Property: Node {
+    public let onGetValue = Event<Any?>()
+    var _value: Any?
+    public var value: Any? {
         get {
             onGetValue.dispatch(_value)
             return _value
@@ -340,11 +343,11 @@ open class Property : Node {
     }
     public init() {
         self._value = nil
-        super.init(parent:nil)
+        super.init(parent: nil)
     }
-    public init(value:Any) {
+    public init(value: Any) {
         self._value = value
-        super.init(parent:nil)
+        super.init(parent: nil)
     }
     override public func detach() {
         if let p = self.value as? Node {
@@ -356,32 +359,32 @@ open class Property : Node {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-open class NodeUI : Node {
-    var textureCache:TextureCache? {
+open class NodeUI: Node {
+    var textureCache: TextureCache? {
         if let p = parent as? NodeUI {
             return p.textureCache
         }
         return nil
     }
-    public var viewport:Viewport? {
-        if let v=self as? Viewport {
+    public var viewport: Viewport? {
+        if let v = self as? Viewport {
             return v
-        } else if let p=parent as? NodeUI {
+        } else if let p = parent as? NodeUI {
             return p.viewport
         }
         return nil
     }
-    public override var attached : Bool {
+    public override var attached: Bool {
         return self.viewport != nil
     }
-    public func animate(_ duration:Double,_ anime:@escaping (Double)->()) -> Future {
-        let fut=Future(context:"animation")
-        let start=ß.time
-        if let vp=viewport {
-            var a : Action<Void>? = nil
+    public func animate(_ duration: Double, _ anime: @escaping (Double) -> Void) -> Future {
+        let fut = Future(context: "animation")
+        let start = ß.time
+        if let vp = viewport {
+            var a: Action<Void>? = nil
             a = vp.pulse.always {
-                let t=(ß.time-start)/duration
-                if t<1 {
+                let t = (ß.time - start) / duration
+                if t < 1 {
                     anime(t)
                     fut.progress(t)
                 } else {
@@ -398,36 +401,38 @@ open class NodeUI : Node {
         }
         return fut
     }
-    public override func wait(_ duration:Double,_ fn:(()->())? = nil) -> Future {
-        let fut=Future(context:"wait")
+    public override func wait(_ duration: Double, _ fn: (() -> Void)? = nil) -> Future {
+        let fut = Future(context: "wait")
         if duration == 0 {
             self.ui {
                 fut.done()
             }
         } else {
-            DispatchQueue.main.asyncAfter(deadline: .now() + duration, execute: { [weak self] in
-                if let this=self, this.attached {
-                    fut.done()
-                } else {
-                    fut.detach()
-                }
-            })
+            DispatchQueue.main.asyncAfter(
+                deadline: .now() + duration,
+                execute: { [weak self] in
+                    if let this = self, this.attached {
+                        fut.done()
+                    } else {
+                        fut.detach()
+                    }
+                })
         }
-        if let fn=fn {
+        if let fn = fn {
             fut.then { f in
                 fn()
             }
         }
         return fut
     }
-    public func ui(_ fn:@escaping ()->()) {
+    public func ui(_ fn: @escaping () -> Void) {
         viewport?.pulse.once { [weak self] in
-            if let this=self, this.attached {
+            if let this = self, this.attached {
                 fn()
             }
         }
     }
-    public func sui(_ fn:@escaping ()->()) {
+    public func sui(_ fn: @escaping () -> Void) {
         if let isui = Thread.current["ui.thread"] as? Bool {
             if isui {
                 fn()
@@ -436,27 +441,27 @@ open class NodeUI : Node {
             }
         }
     }
-    public func urgent(_ info:String="",_ fn:@escaping ()->()) {
-        if let vp=viewport {
-            let _ = vp.bg.run(self,priority:Job.Priority.high,info:info,action:fn)
+    public func urgent(_ info: String = "", _ fn: @escaping () -> Void) {
+        if let vp = viewport {
+            let _ = vp.bg.run(self, priority: Job.Priority.high, info: info, action: fn)
         }
     }
-    public func bg(_ info:String="",_ fn:@escaping ()->()) {
-        guard let vp=viewport else { return }
-        _ = vp.bg.run(self,info:info,action:fn)
+    public func bg(_ info: String = "", _ fn: @escaping () -> Void) {
+        guard let vp = viewport else { return }
+        _ = vp.bg.run(self, info: info, action: fn)
     }
-    public func io(_ info:String="",_ fn:@escaping ()->()) {
-        if let vp=viewport {
-            let _ = vp.io.run(self,info:info,action:fn)
+    public func io(_ info: String = "", _ fn: @escaping () -> Void) {
+        if let vp = viewport {
+            let _ = vp.io.run(self, info: info, action: fn)
         }
     }
-    public func zz(_ info:String="",_ fn:@escaping ()->()) {
-        if let vp=viewport {
-            let _ = vp.zz.run(self,info:info,action:fn)
+    public func zz(_ info: String = "", _ fn: @escaping () -> Void) {
+        if let vp = viewport {
+            let _ = vp.zz.run(self, info: info, action: fn)
         }
     }
-    public init(parent:NodeUI?) {
-        super.init(parent:parent)
+    public init(parent: NodeUI?) {
+        super.init(parent: parent)
     }
     open override func detach() {
         let viewport = self.viewport
@@ -469,101 +474,49 @@ open class NodeUI : Node {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-public class Action<T> : Hash {
-    let fn:((T)->())
-    public func invoke(_ p:T) {
+public class Action<T>: Hash {
+    let fn: ((T) -> Void)
+    public func invoke(_ p: T) {
         fn(p)
     }
-    public init(_ fn:@escaping ((T)->()))  {
+    public init(_ fn: @escaping ((T) -> Void)) {
         self.fn = fn
     }
 }
-public class Function<T,TR> : Hash {
-    let fn:((T)->(TR))
-    public func invoke(_ p:T) -> TR {
+public class Function<T, TR>: Hash {
+    let fn: ((T) -> (TR))
+    public func invoke(_ p: T) -> TR {
         return fn(p)
     }
-    public init(_ fn:@escaping ((T)->(TR)))  {
+    public init(_ fn: @escaping ((T) -> (TR))) {
         self.fn = fn
     }
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-/*
-public class MultiEvent<T> {
-    private var actions = [String:Set<Action<T>>]()
-    private var onces = [String:Set<Action<T>>]()
-    public func always(_ message:String,action:@escaping (T)->()) {
-        if actions[message] != nil {
-            actions[message]!.insert(Action<T>(action))
-        } else {
-            actions[message]=Set<Action<T>>()
-            actions[message]!.insert(Action<T>(action))
-        }
-    }
-    public func once(_ message:String,action:@escaping (T)->()) {
-        if onces[message] != nil {
-            actions[message]!.insert(Action<T>(action))
-        } else {
-            onces[message]=Set<Action<T>>()
-            onces[message]!.insert(Action<T>(action))
-        }
-    }
-    public func alive(_ owner:NodeUI,message:String,action:@escaping (T)->()) {
-        let a=Action<T>(action)
-        if actions[message] != nil {
-            actions[message]!.insert(a)
-        } else {
-            actions[message]=Set<Action<T>>()
-            actions[message]!.insert(a)
-        }
-        owner.onDetach.once {
-            self.actions[message]!.remove(a)
-        }
-    }
-    public func dispatch(_ message:String,_ p:T) {
-        if let ac=actions[message]  {
-            for a in ac {
-                a.invoke(p);
-            }
-        }
-        if let o=onces[message] {
-            onces[message]=Set<Action<T>>()
-            for a in o {
-                a.invoke(p)
-            }
-        }
-    }
-    public init() {
-    }
-}
- */
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-public class Event<T> {
+public class Event<T>: @unchecked Sendable {
     public var _actions = Set<Action<T>>()
     public var _onces = Set<Action<T>>()
     public let _lock = Lock()
     public func Event() {
     }
-    public func always(_ action: @escaping (T)->()) -> Action<T> {
-        let a=Action<T>(action)
+    public func always(_ action: @escaping (T) -> Void) -> Action<T> {
+        let a = Action<T>(action)
         _lock.sync {
             self._actions.insert(a)
         }
         return a
     }
-    public func once(_ action: @escaping (T)->()) {
+    public func once(_ action: @escaping (T) -> Void) {
         _lock.sync {
             self._onces.insert(Action<T>(action))
         }
     }
-    public func alive(_ owner: Node, _ action: @escaping (T)->()) {
-        let a=Action<T>(action)
+    public func alive(_ owner: Node, _ action: @escaping (T) -> Void) {
+        let a = Action<T>(action)
         _lock.sync {
-            self._actions.insert(a);
+            self._actions.insert(a)
         }
         owner.onDetach.once {
             self._lock.sync {
@@ -571,26 +524,25 @@ public class Event<T> {
             }
         }
     }
-    public var count:Int {
-        return _actions.count+_onces.count
+    public var count: Int {
+        return _actions.count + _onces.count
     }
-    public func dispatch(_ p:T)
-    {
-        var ac:Set<Action<T>>?
-        var o:Set<Action<T>>?
+    public func dispatch(_ p: T) {
+        var ac: Set<Action<T>>?
+        var o: Set<Action<T>>?
         _lock.sync {
             ac = self._actions
             o = self._onces
             self._onces.removeAll()
         }
         for a in ac! {
-            a.invoke(p);
+            a.invoke(p)
         }
         for a in o! {
             a.invoke(p)
         }
     }
-    public func remove(_ action:Action<T>) {
+    public func remove(_ action: Action<T>) {
         _lock.sync {
             self._actions.remove(action)
         }
@@ -601,7 +553,7 @@ public class Event<T> {
             self._onces.removeAll()
         }
     }
-    public func pipe(to:Event<T>,owner:Node) {
+    public func pipe(to: Event<T>, owner: Node) {
         self.alive(owner) { p in
             to.dispatch(p)
         }
@@ -613,15 +565,15 @@ public class Event<T> {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 public class Lock {
-    let queue : DispatchQueue = DispatchQueue(label: "Alib.Lock")
-    public func sync(_ execute: () -> ()) {
+    let queue: DispatchQueue = DispatchQueue(label: "Alib.Lock")
+    public func sync(_ execute: () -> Void) {
         queue.sync { [weak self] in
             guard self != nil else { return }
             execute()
         }
     }
-    public func async(_ execute: @escaping @Sendable () -> ()) {
-        queue.async {  [weak self] in
+    public func async(_ execute: @escaping @Sendable () -> Void) {
+        queue.async { [weak self] in
             guard self != nil else { return }
             execute()
         }
@@ -630,22 +582,24 @@ public class Lock {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-public class Timer : NSObject {
-    var timer:Foundation.Timer?
-    let tick:()->()
-    public init(period:Double,tick:@escaping ()->()) {
-        self.tick=tick
+public class Timer: NSObject {
+    var timer: Foundation.Timer?
+    let tick: () -> Void
+    public init(period: Double, tick: @escaping () -> Void) {
+        self.tick = tick
         super.init()
-        timer = Foundation.Timer.scheduledTimer(timeInterval: period, target: self, selector: #selector(update), userInfo: nil, repeats: true)
+        timer = Foundation.Timer.scheduledTimer(
+            timeInterval: period, target: self, selector: #selector(update), userInfo: nil,
+            repeats: true)
     }
     @objc func update() {
         tick()
     }
     public func stop() {
-        if let t=timer {
+        if let t = timer {
             t.invalidate()
         }
-        timer=nil
+        timer = nil
     }
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////

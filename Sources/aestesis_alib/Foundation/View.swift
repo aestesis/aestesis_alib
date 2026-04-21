@@ -55,7 +55,7 @@ open class View : NodeUI {
         }
     }
     public struct Layout {
-        public static var marginMultiplier:Double = 1.0
+        public static let marginMultiplier:Double = 1.0
         public var placement:Rect=Rect(x:0,y:0,w:1,h:1)
         public var align:Align=Align.none
         public var marginLeft:Double=0

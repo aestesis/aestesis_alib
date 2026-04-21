@@ -8,11 +8,13 @@
 
 import Foundation
 
-public class IGN {
+// Sendable conformance disabled for credentials storage
+// Credentials are set once and only changed via @MainActor
+class IGN {
     // https://geoservices.ign.fr/documentation/geoservices/geocodage.html#recherche-par-lieux
     // default: epsg:4326 (=WGS84)  googlemap is EPSG::3857
-    public static var key = ""
-    public static var userAgent = ""
+    static var key = ""
+    static var userAgent = ""
     static let apiSearch = "http://wxs.ign.fr/$key/geoportail/ols"
     public static func search(query:String,fn:@escaping ((Any?)->())) {
         var api = IGN.apiSearch

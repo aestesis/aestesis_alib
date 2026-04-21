@@ -27,7 +27,7 @@ import simd
 
 // TODO: shader hsl <-> rgb https://www.ronja-tutorials.com/post/041-hsv-colorspace/#full-hsv-to-rgb-conversion
 
-public struct Color : CustomStringConvertible,JsonConvertible {
+public struct Color : CustomStringConvertible,JsonConvertible, Sendable {
     // http://www.easyrgb.com/en/math.php
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////

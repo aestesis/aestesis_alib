@@ -490,7 +490,7 @@ import CoreGraphics
                 if Font.registred[name]==nil {
                     let url=Foundation.URL(fileURLWithPath: Application.resourcePath(name))
                     if CTFontManagerRegisterFontsForURL(url as CFURL,CTFontManagerScope.process,nil) {
-                        Font.registred[name]=true
+                         Font.registred[name]=true
                     } else {
                         Font.registred[name]=false
                         //Debug.error("error, can't register font \(url.absoluteString)")
