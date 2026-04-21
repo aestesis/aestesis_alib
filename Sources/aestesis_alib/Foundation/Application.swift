@@ -27,11 +27,11 @@ import Foundation
 
 public class Application {
     #if os(OSX)
-    public static var applicationDelegate : OsAppDelegate {
+    @MainActor public static var applicationDelegate : OsAppDelegate {
         return NSApplication.shared.delegate as! OsAppDelegate
     }
     #else
-    public static var applicationDelegate : OsAppDelegate {
+    @MainActor public static var applicationDelegate : OsAppDelegate {
         return UIApplication.shared.delegate as! OsAppDelegate
     }
     #endif
@@ -265,7 +265,7 @@ public class Application {
             Debug.notImplemented()
         #endif
     }
-    public static func stop() {
+    @MainActor public static func stop() {
         Application.onStop.dispatch(())
         Application.live.removeAll()
         Application.db.synchronize()

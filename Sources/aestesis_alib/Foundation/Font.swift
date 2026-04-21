@@ -577,7 +577,7 @@ import Foundation
     }
 #endif
 
-public class FontMetrics: NodeUI {
+public class FontMetrics: NodeUI, @unchecked Sendable {
     let font: Font
     public init(parent: NodeUI, name: String, size: Double) {
         self.font = Font(parent: parent, name: name, size: size)

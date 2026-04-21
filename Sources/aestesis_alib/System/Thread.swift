@@ -90,7 +90,7 @@ public class Thread: Atom, @unchecked Sendable {
     }
 }
 
-public class SynchronizedValue<T> {
+public class SynchronizedValue<T: Sendable>: @unchecked Sendable {
     private let accessQueue = DispatchQueue(label: "SynchronizedValueAccess")
     private var _value: T?
     var value: T? {
@@ -109,7 +109,7 @@ public class SynchronizedValue<T> {
     }
 }
 
-public class SynchronizedArray<T> {
+public class SynchronizedArray<T: Sendable>: @unchecked Sendable {
     private var array: [T] = []
     private let accessQueue = DispatchQueue(
         label: "SynchronizedArrayAccess", attributes: .concurrent)
@@ -208,7 +208,7 @@ public class SynchronizedArray<T> {
     }
 }
 
-public class SynchronizedDictionnary<TK: Hashable, TV>: Collection {
+public class SynchronizedDictionnary<TK: Hashable, TV>: Collection, @unchecked Sendable {
     private let accessQueue: DispatchQueue = DispatchQueue(
         label: "SynchronizedDictionaryAccess", qos: .userInteractive, attributes: .concurrent)
     private var dictionary: [TK: TV]
@@ -241,7 +241,7 @@ public class SynchronizedDictionnary<TK: Hashable, TV>: Collection {
         self.dictionary = dict
     }
     public func removeAll() {
-        accessQueue.async(flags: .barrier) { [weak self] in
+        self.accessQueue.async(flags: .barrier) { [weak self] in
             self?.dictionary.removeAll()
         }
     }
@@ -255,7 +255,7 @@ public class SynchronizedDictionnary<TK: Hashable, TV>: Collection {
             return self.dictionary[index]
         }
     }
-    public subscript(key: TK) -> TV? {
+    nonisolated public subscript(key: TK) -> TV? {
         set {
             accessQueue.async(flags: .barrier) {
                 self.dictionary[key] = newValue

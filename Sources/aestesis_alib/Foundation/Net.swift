@@ -21,9 +21,9 @@ import Foundation
 import SystemConfiguration
 
 #if os(iOS) || os(tvOS)
-import UIKit
+    import UIKit
 #elseif os(macOS)
-import AppKit
+    import AppKit
 #endif
 
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -118,24 +118,25 @@ public class Socket: Stream<UInt8>, @unchecked Sendable {
     // https://gist.github.com/kvannotten/57ddd5531c228e7e08c6
     nonisolated(unsafe) static var sockets = [Socket]()
     nonisolated(unsafe) static var queue = DispatchQueue(label: "alib.sockets", qos: .userInitiated)
-    nonisolated(unsafe) static var ioqueue = DispatchQueue(label: "alib.sockets.io", qos: .userInitiated)
+    nonisolated(unsafe) static var ioqueue = DispatchQueue(
+        label: "alib.sockets.io", qos: .userInitiated)
     nonisolated(unsafe) static var timer: DispatchSourceTimer?
-    
+
     var sread: InputStream?
     var swrite: OutputStream?
     var release = false
     var rBuffer = [UInt8]()
     var handle: Handle?
-    
+
     var connected = false
     var errsock = false
     var readOk = false
     var eof = false
     var start = ß.time
-    
+
     var host: String
     var port: Int
-    
+
     public var alive: Double {
         return ß.time - start
     }
@@ -148,11 +149,11 @@ public class Socket: Stream<UInt8>, @unchecked Sendable {
         }
         return 0
     }
-#if DEBUG
-    public override var debugDescription: String {
-        return "Socket.init(host:\"\(host)\",port:\(port))"
-    }
-#endif
+    #if DEBUG
+        public override var debugDescription: String {
+            return "Socket.init(host:\"\(host)\",port:\(port))"
+        }
+    #endif
     public static var count: Int {
         var nsock = 0
         Socket.queue.sync {
@@ -214,8 +215,10 @@ public class Socket: Stream<UInt8>, @unchecked Sendable {
                 kCFAllocatorDefault, host as CFString, UInt32(port), &readStream, &writeStream)
             self.sread = readStream!.takeRetainedValue()
             self.swrite = writeStream!.takeRetainedValue()
-            CFReadStreamScheduleWithRunLoop(self.sread, CFRunLoopGetMain(), CFRunLoopMode.commonModes)
-            CFWriteStreamScheduleWithRunLoop(self.swrite, CFRunLoopGetMain(), CFRunLoopMode.commonModes)
+            CFReadStreamScheduleWithRunLoop(
+                self.sread, CFRunLoopGetMain(), CFRunLoopMode.commonModes)
+            CFWriteStreamScheduleWithRunLoop(
+                self.swrite, CFRunLoopGetMain(), CFRunLoopMode.commonModes)
             self.handle = Handle({ [weak self] event in
                 switch event {
                 case .openCompleted:
@@ -256,7 +259,8 @@ public class Socket: Stream<UInt8>, @unchecked Sendable {
                 if let i = Socket.sockets.firstIndex(of: self) {
                     Socket.sockets.remove(at: i)
                 }
-                CFReadStreamUnscheduleFromRunLoop(self.sread, CFRunLoopGetMain(), CFRunLoopMode.commonModes)
+                CFReadStreamUnscheduleFromRunLoop(
+                    self.sread, CFRunLoopGetMain(), CFRunLoopMode.commonModes)
                 CFWriteStreamUnscheduleFromRunLoop(
                     self.swrite, CFRunLoopGetMain(), CFRunLoopMode.commonModes)
                 CFReadStreamClose(self.sread)
@@ -306,7 +310,9 @@ public class Socket: Stream<UInt8>, @unchecked Sendable {
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-class SessionTaskDelegate: NSObject, URLSessionTaskDelegate, URLSessionStreamDelegate, @unchecked Sendable {
+class SessionTaskDelegate: NSObject, URLSessionTaskDelegate, URLSessionStreamDelegate,
+    @unchecked Sendable
+{
     @objc public func urlSession(
         _ session: URLSession, task: URLSessionTask, willBeginDelayedRequest request: URLRequest,
         completionHandler: @escaping (URLSession.DelayedRequestDisposition, URLRequest?) -> Void
@@ -326,7 +332,8 @@ class SessionTaskDelegate: NSObject, URLSessionTaskDelegate, URLSessionStreamDel
         Debug.warning("URLSessionTaskDelegate.willPerformHTTPRedirection")
     }
     @objc public func urlSession(
-        _ session: URLSession, task: URLSessionTask, didReceive challenge: URLAuthenticationChallenge,
+        _ session: URLSession, task: URLSessionTask,
+        didReceive challenge: URLAuthenticationChallenge,
         completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
     ) {
         // https://developer.apple.com/documentation/foundation/url_loading_system/handling_an_authentication_challenge
@@ -337,9 +344,10 @@ class SessionTaskDelegate: NSObject, URLSessionTaskDelegate, URLSessionStreamDel
             return
         }
         completionHandler(
-            .useCredential, URLCredential(user: "renan", password: "password", persistence: .forSession))  // TODO: implements user/password
+            .useCredential,
+            URLCredential(user: "renan", password: "password", persistence: .forSession))  // TODO: implements user/password
     }
-    
+
     @objc public func urlSession(
         _ session: URLSession, task: URLSessionTask,
         needNewBodyStream completionHandler: @escaping (InputStream?) -> Void
@@ -353,7 +361,8 @@ class SessionTaskDelegate: NSObject, URLSessionTaskDelegate, URLSessionStreamDel
         Debug.warning("URLSessionTaskDelegate.didSendBodyData")
     }
     @objc public func urlSession(
-        _ session: URLSession, task: URLSessionTask, didFinishCollecting metrics: URLSessionTaskMetrics
+        _ session: URLSession, task: URLSessionTask,
+        didFinishCollecting metrics: URLSessionTaskMetrics
     ) {
         Debug.warning("URLSessionTaskDelegate.didFinishCollectingMetrics")
     }
@@ -361,11 +370,13 @@ class SessionTaskDelegate: NSObject, URLSessionTaskDelegate, URLSessionStreamDel
         _ session: URLSession, task: URLSessionTask, didCompleteWithError error: Swift.Error?
     ) {
         if let error = error {
-            Debug.warning("URLSessionTaskDelegate.didCompleteWithError \(error.localizedDescription)")
+            Debug.warning(
+                "URLSessionTaskDelegate.didCompleteWithError \(error.localizedDescription)")
         }
     }
-    @objc public func urlSession(_ session: URLSession, didBecomeInvalidWithError error: Swift.Error?)
-    {
+    @objc public func urlSession(
+        _ session: URLSession, didBecomeInvalidWithError error: Swift.Error?
+    ) {
         if let error = error {
             Debug.warning(
                 "URLSessionTaskDelegate.didBecomeInvalidWithError \(error.localizedDescription)")
@@ -395,7 +406,7 @@ class SessionTaskDelegate: NSObject, URLSessionTaskDelegate, URLSessionStreamDel
 }
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-public class Request: Future {  // TODO: request response stream from http, filesystem??..
+public class Request: Future, @unchecked Sendable {  // TODO: request response stream from http, filesystem??..
     // http://www.tcpipguide.com/free/t_HTTPRequestMessageFormat.htm
     static let queue = DispatchQueue(label: "alib.request")
     static let opQueue = OperationQueue()
@@ -434,8 +445,8 @@ public class Request: Future {  // TODO: request response stream from http, file
             }
         }
         super.init(context: url)
-        
-        var req = [String]()
+
+        nonisolated(unsafe) var req = [String]()
         var q = "/"
         if let pq = self.url.pathAndQuery {
             if pq.length > 0 {
@@ -448,7 +459,7 @@ public class Request: Future {  // TODO: request response stream from http, file
             "Connection: close",
             "Host: \(self.url.host!)",
         ])
-        
+
         if let body = body {
             req.append("Content-Length: \(body.utf8.count)")
         } else {
@@ -460,7 +471,7 @@ public class Request: Future {  // TODO: request response stream from http, file
             }
         }
         req.append(Request.CR)  // empty line
-        
+
         self.response.onClose.once {
             self.close()
         }
@@ -471,13 +482,14 @@ public class Request: Future {  // TODO: request response stream from http, file
                     self.done(self.response)
                 } else {
                     self.error(
-                        Response.ResponseError(self.response.statusMessage, self.response, #file, #line))
+                        Response.ResponseError(
+                            self.response.statusMessage, self.response, #file, #line))
                 }
             } else {
                 self.error(Error("Bad http response header", #file, #line))
             }
         }
-        
+
         if let client = client {
             client.onOpen.once {
                 Request.queue.async {
@@ -512,7 +524,8 @@ public class Request: Future {  // TODO: request response stream from http, file
                     }
                 }
                 timer.setEventHandler {
-                    task.readData(ofMinLength: 0, maxLength: 2048, timeout: 0.009) { data, eof, err in
+                    task.readData(ofMinLength: 0, maxLength: 2048, timeout: 0.009) {
+                        data, eof, err in
                         if let data = data {
                             let buffer = [UInt8](data)
                             _ = self.response.write(buffer, offset: 0, count: buffer.count)
@@ -530,7 +543,7 @@ public class Request: Future {  // TODO: request response stream from http, file
         } else {
             self.error(Error("wrong URL \(url)", #file, #line))
         }
-        
+
     }
     override public func detach() {
         self.close()
@@ -543,7 +556,8 @@ public class Request: Future {  // TODO: request response stream from http, file
             if let client = client {
                 let alive = client.alive
                 if alive > 5 {
-                    Debug.warning("long lived Request \(alive.string(2)): \(self.url.absoluteString)")
+                    Debug.warning(
+                        "long lived Request \(alive.string(2)): \(self.url.absoluteString)")
                 }
                 client.close()
                 self.client = nil
@@ -565,7 +579,7 @@ public class Request: Future {  // TODO: request response stream from http, file
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-public class Response: UTF8Reader {
+public class Response: UTF8Reader, @unchecked Sendable {
     // http://www.tcpipguide.com/free/t_HTTPResponseMessageFormat.htm#Figure_318
     public private(set) var status: Int = 0
     public private(set) var statusMessage: String = ""
@@ -608,20 +622,20 @@ public class Response: UTF8Reader {
         }
         Debug.info(
             "magic: " + String(format: "%2x", data[0]) + " " + String(format: "%2x", data[1]) + " "
-            + String(format: "%2x", data[2]) + " " + String(format: "%2x", data[3]))
+                + String(format: "%2x", data[2]) + " " + String(format: "%2x", data[3]))
         return Bitmap(parent: parent, data: data)
     }
-#if os(iOS) || os(tvOS) || os(macOS)
-    public func readData() -> Data? {
-        //Debug.info("available: \(available)")
-        let data = read(available)
-        if data.isEmpty {
-            return nil
+    #if os(iOS) || os(tvOS) || os(macOS)
+        public func readData() -> Data? {
+            //Debug.info("available: \(available)")
+            let data = read(available)
+            if data.isEmpty {
+                return nil
+            }
+            return NSData(bytes: data, length: data.count) as Data?
         }
-        return NSData(bytes: data, length: data.count) as Data?
-    }
-#endif
-    public class ResponseError: Error {
+    #endif
+    public class ResponseError: Error, @unchecked Sendable {
         public let response: Response
         init(_ message: String, _ response: Response, _ file: String = #file, _ line: Int = #line) {
             self.response = response
@@ -672,7 +686,8 @@ public class Web {
     }
     public static func getText(_ url: String, _ fn: @escaping (Any?) -> Void) {
         let header = [
-            "User-Agent": "Mozilla/5.0 \(Application.name)/\(Application.version) (\(Application.author))"
+            "User-Agent":
+                "Mozilla/5.0 \(Application.name)/\(Application.version) (\(Application.author))"
         ]
         let _ = Request(url: url, header: header).then { (fut) in
             if let res = fut.result as? Response {
@@ -700,7 +715,8 @@ public class Web {
     }
     public static func getXML(_ url: String, _ fn: @escaping (Any?) -> Void) {
         let header = [
-            "User-Agent": "Mozilla/5.0 \(Application.name)/\(Application.version) (\(Application.author))"
+            "User-Agent":
+                "Mozilla/5.0 \(Application.name)/\(Application.version) (\(Application.author))"
         ]
         let _ = Request(url: url, header: header).then { (fut) in
             if let res = fut.result as? Response {
@@ -739,7 +755,8 @@ public class Web {
         _ fn: @escaping (Any?) -> Void
     ) {
         var header = [
-            "User-Agent": "Mozilla/5.0 \(Application.name)/\(Application.version) (\(Application.author))"
+            "User-Agent":
+                "Mozilla/5.0 \(Application.name)/\(Application.version) (\(Application.author))"
         ]
         for (k, v) in h {
             header[k] = v
@@ -783,38 +800,40 @@ public class Web {
             }
         }
     }
-    public static func getBitmap(parent: NodeUI, url: String, _ fn: @escaping (Any?) -> Void) {
+    public static func getBitmap(
+        parent: NodeUI, url: String, _ fn: @escaping @Sendable (Any?) -> Void
+    ) {
         guard let imageUrl: Foundation.URL = Foundation.URL(string: url) else {
-            fn(fn(Error("wrong url format")))
+            fn(Error("wrong url format"))
             return
         }
         DispatchQueue.global().async {
             guard let imageData = try? Data(contentsOf: imageUrl) else {
-                fn(fn(Error("request error")))
+                fn(Error("request error"))
                 return
             }
-#if os(iOS) || os(tvOS)
-            parent.ui {
-                if let image = UIImage(data: imageData) {
-                    fn(Bitmap(parent: parent, cg: image.cgImage!))
+            #if os(iOS) || os(tvOS)
+                parent.ui {
+                    if let image = UIImage(data: imageData) {
+                        fn(Bitmap(parent: parent, cg: image.cgImage!))
+                    } else {
+                        fn(Error("wrong bitmap data"))
+                    }
+                }
+            #elseif os(macOS)
+                if let image = NSImage(data: imageData),
+                    let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil)
+                {
+                    fn(Bitmap(parent: parent, cg: cg))
                 } else {
                     fn(Error("wrong bitmap data"))
                 }
-            }
-#elseif os(macOS)
-            if let image = NSImage(data: imageData),
-               let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil)
-            {
-                fn(Bitmap(parent: parent, cg: cg))
-            } else {
-                fn(Error("wrong bitmap data"))
-            }
-#else
-            Debug.notImplemented()
-#endif
+            #else
+                Debug.notImplemented()
+            #endif
         }
     }
-    
+
     public static func post(
         url: String, headers: [String: String]? = nil, json: JSON, fn: @escaping (Any?) -> Void
     ) {
@@ -969,51 +988,54 @@ public class Web {
         }
         Web.post(url: url, headers: headers, multipart: mp, sign: sign, fn: fn)
     }
-#if os(iOS) || os(tvOS)
-    /*
-     if let url = Foundation.URL(string:"\(dburl)image/\(id)\(crop ? "?crop=true" : "")") {
-     let boundary = "boundary_____\(ß.alphaID)"
-     let preboundary = "--\(boundary)"
-     var req = URLRequest(url:url)
-     req.httpMethod = "POST"
-     req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
-     var body = Data()
-     body.append(preboundary.data(using:.utf8)!)
-     body.append("Content-Disposition: form-data; name=\"file\"; filename=\"image.png\"\r\n".data(using: .utf8)!)
-     body.append("Content-Type: image/png\r\n".data(using: .utf8)!)
-     body.append("\r\n".data(using: .utf8)!)
-     body.append(image.pngData()!)
-     body.append("\r\n".data(using: .utf8)!)
-     body.append("--\(boundary)--".data(using: .utf8)!)
-     req.httpBody = body
-     req.setValue(String(body.count), forHTTPHeaderField: "Content-Length")
-     let task = URLSession.shared.dataTask(with: req) { data, response, error in
-     guard let data = data, error == nil else {
-     Debug.error(error?.localizedDescription ?? "No data")
-     return
-     }
-     fn?(JSON(data))
-     }
-     task.resume()
-     }*/
-    public static func post(
-        url: String, headers: [String: String]? = nil, form: [String: String]? = nil, image: UIImage,
-        filename: String = "image.png", fn: @escaping (Any?) -> Void
-    ) {
-        let png = image.pngData()
-        var mp = [
-            Multipart(
-                disposition: "form-data; name=\"file\"; filename=\"\(filename)\"", type: "image/png",
-                mesh: png!.base64EncodedString())
-        ]
-        if let form = form {
-            for f in form {
-                mp.append(Multipart(disposition: "form-data; name=\"\(f.0)\"", type: nil, mesh: f.1))
+    #if os(iOS) || os(tvOS)
+        /*
+         if let url = Foundation.URL(string:"\(dburl)image/\(id)\(crop ? "?crop=true" : "")") {
+         let boundary = "boundary_____\(ß.alphaID)"
+         let preboundary = "--\(boundary)"
+         var req = URLRequest(url:url)
+         req.httpMethod = "POST"
+         req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+         var body = Data()
+         body.append(preboundary.data(using:.utf8)!)
+         body.append("Content-Disposition: form-data; name=\"file\"; filename=\"image.png\"\r\n".data(using: .utf8)!)
+         body.append("Content-Type: image/png\r\n".data(using: .utf8)!)
+         body.append("\r\n".data(using: .utf8)!)
+         body.append(image.pngData()!)
+         body.append("\r\n".data(using: .utf8)!)
+         body.append("--\(boundary)--".data(using: .utf8)!)
+         req.httpBody = body
+         req.setValue(String(body.count), forHTTPHeaderField: "Content-Length")
+         let task = URLSession.shared.dataTask(with: req) { data, response, error in
+         guard let data = data, error == nil else {
+         Debug.error(error?.localizedDescription ?? "No data")
+         return
+         }
+         fn?(JSON(data))
+         }
+         task.resume()
+         }*/
+        public static func post(
+            url: String, headers: [String: String]? = nil, form: [String: String]? = nil,
+            image: UIImage,
+            filename: String = "image.png", fn: @escaping (Any?) -> Void
+        ) {
+            let png = image.pngData()
+            var mp = [
+                Multipart(
+                    disposition: "form-data; name=\"file\"; filename=\"\(filename)\"",
+                    type: "image/png",
+                    mesh: png!.base64EncodedString())
+            ]
+            if let form = form {
+                for f in form {
+                    mp.append(
+                        Multipart(disposition: "form-data; name=\"\(f.0)\"", type: nil, mesh: f.1))
+                }
             }
+            Web.post(url: url, headers: headers, multipart: mp, fn: fn)
         }
-        Web.post(url: url, headers: headers, multipart: mp, fn: fn)
-    }
-#endif
+    #endif
     public static func getICE(
         url: String, header headerfn: (([String: String]) -> Void)? = nil,
         meta: (([String: String]) -> Void)? = nil,
@@ -1051,7 +1073,7 @@ public class Web {
                                     let b = res.read(n)
                                     co += b.count
                                     let _ = ms.write(b, offset: 0, count: b.count)
-                                    
+
                                 }
                                 if co == mi {
                                     if res.available < needed {  // wait next call for more data
@@ -1060,7 +1082,7 @@ public class Web {
                                     if needed == 1 {
                                         let b = res.read(1)
                                         needed = Int(b[0]) * 16
-                                        
+
                                     }
                                     if needed == 0 {
                                         co = 0
@@ -1068,7 +1090,9 @@ public class Web {
                                     } else if needed > 1 && res.available >= needed {
                                         var metadata = [String: String]()
                                         let buf = res.read(needed)
-                                        if let mstring = String(bytes: buf, encoding: String.Encoding.utf8) {
+                                        if let mstring = String(
+                                            bytes: buf, encoding: String.Encoding.utf8)
+                                        {
                                             for l in mstring.split(";") {
                                                 let ww = l.split("=")
                                                 if ww.count == 2 {

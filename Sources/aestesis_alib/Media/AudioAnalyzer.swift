@@ -27,7 +27,7 @@ import Foundation
 
 // FFT: https://developer.apple.com/documentation/accelerate/discrete_fourier_transforms
 
-public class AudioAnalyzer: Atom {
+public class AudioAnalyzer: Atom, @unchecked Sendable {
     static let samplesCount = 4096
     public var maxAmp: Float = 2.0
     var fftProcessor = FFT(count: samplesCount)
