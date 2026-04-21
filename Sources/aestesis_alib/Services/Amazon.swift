@@ -13,9 +13,9 @@ import Foundation
 // try sign:    http://associates-amazon.s3.amazonaws.com/signed-requests/helper/index.html
 
 public class Amazon {
-    public static var key = ""
-    public static var secret = ""
-    public static var tag = ""
+    nonisolated(unsafe) static var key = ""
+    nonisolated(unsafe) static var secret = ""
+    nonisolated(unsafe) static var tag = ""
     static let service="http://webservices.amazon.com/onca/xml?"
     static let apiSearch="Service=AWSECommerceService&AWSAccessKeyId=$key&AssociateTag=$tag&Operation=ItemSearch&Keywords=$query&SearchIndex=Music&Timestamp=$time"
     public static func searchArtist(name:String,fn:@escaping ((Any?)->())) {

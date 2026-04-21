@@ -1,4 +1,3 @@
-
 //
 //  Viewport.swift
 //  Alib
@@ -19,116 +18,119 @@
 //  limitations under the License.
 
 import Foundation
+
 #if os(tvOS) || os(iOS) || os(macOS)
-import Metal
-import QuartzCore
-import MetalKit
+    import Metal
+    import QuartzCore
+    import MetalKit
 #else
-import Dispatch
+    import Dispatch
 #endif
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-public class Viewport : NodeUI {
+public class Viewport: NodeUI, @unchecked Sendable {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     class GPU {
-        var device:MTLDevice?
-        var queue:MTLCommandQueue {
-            let key="aestesis.alib.Viewport.GPU.queue"
-            if let q=Thread.current[key] as? MTLCommandQueue {
-                return q;
+        var device: MTLDevice?
+        var queue: MTLCommandQueue {
+            let key = "aestesis.alib.Viewport.GPU.queue"
+            if let q = Thread.current[key] as? MTLCommandQueue {
+                return q
             }
             Debug.info("Viewport.GPU: new command queue for thread")
-            let q=device!.makeCommandQueue()
-            Thread.current[key]=q
+            let q = device!.makeCommandQueue()
+            Thread.current[key] = q
             return q!
         }
-        var library:ProgramLibrary?
-        var loader:MTKTextureLoader?
-        var buffers:Buffers?
-        var tess:Tess {
-            let key="aestesis.alib.Viewport.GPU.libtess"
-            if let t=Thread.current[key] as? Tess {
-                return t;
+        var library: ProgramLibrary?
+        var loader: MTKTextureLoader?
+        var buffers: Buffers?
+        var tess: Tess {
+            let key = "aestesis.alib.Viewport.GPU.libtess"
+            if let t = Thread.current[key] as? Tess {
+                return t
             }
             Debug.info("Viewport.GPU: new libtess for thread")
-            let t=Tess()
-            Thread.current[key]=t
+            let t = Tess()
+            Thread.current[key] = t
             return t
         }
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    let gpu=GPU()
+    let gpu = GPU()
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    let _textureCache:TextureCache
-    override var textureCache:TextureCache? {
+    let _textureCache: TextureCache
+    override var textureCache: TextureCache? {
         return _textureCache
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public let pulse=Event<Void>()
-    public let onTouches=Event<[TouchLocation]>()
-    public let onKey=Event<Key>()
-    public let onBackingScale=Event<Size>()
+    public let pulse = Event<Void>()
+    public let onTouches = Event<[TouchLocation]>()
+    public let onKey = Event<Key>()
+    public let onBackingScale = Event<Size>()
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public var orientation:Orientation {
-        return systemView.orientation
-    }
-    public var safeArea:EdgeInsets {
-#if os(iOS)
-        if let sv = systemView as? UIView {
-            return EdgeInsets(ei:sv.window!.safeAreaInsets)
+    public var orientation: Orientation {
+        return DispatchQueue.main.sync {
+            return systemView.orientation
         }
-#endif
+    }
+    public var safeArea: EdgeInsets {
+        #if os(iOS)
+            if let sv = systemView as? UIView {
+                return EdgeInsets(ei: sv.window!.safeAreaInsets)
+            }
+        #endif
         return EdgeInsets()
     }
-    public private(set) var scale:Size=Size(1,1)
-    public private(set) var release=false
-    public private(set) var focusedView:View?
-    public private(set) var fps:Double = 60
-    public private(set) var nframes:Int=0
+    public private(set) var scale: Size = Size(1, 1)
+    public private(set) var release = false
+    public private(set) var focusedView: View?
+    public private(set) var fps: Double = 60
+    public private(set) var nframes: Int = 0
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     let debugThread = true
-    public var systemView:SystemView
-    var keyframe:Double=ß.time
-    var refreshers=[(owner:NodeUI,action:Action<Void>)]()
-    var refreshLock=Lock()
+    public var systemView: SystemView
+    var keyframe: Double = ß.time
+    var refreshers = [(owner: NodeUI, action: Action<Void>)]()
+    var refreshLock = Lock()
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    private var _needsLayout : Bool = false
-    public var needsLayout : Bool {
+    private var _needsLayout: Bool = false
+    public var needsLayout: Bool {
         get { return _needsLayout }
         set(b) {
             if b {
-                _needsLayout=true
+                _needsLayout = true
             }
         }
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    private var _rootView:View?
-    public var rootView : View? {
+    private var _rootView: View?
+    public var rootView: View? {
         get { return _rootView }
         set(v) {
-            _rootView=v
-            if let vv=v {
-                vv.size=self.size
+            _rootView = v
+            if let vv = v {
+                vv.size = self.size
             }
         }
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    var pixsize : Size
-    private var _size:Size = Size.zero
+    var pixsize: Size
+    private var _size: Size = Size.zero
     public var size: Size {
         get { return _size }
         set(s) {
-            if(s != _size) {
+            if s != _size {
                 Debug.warning("viewport resized:\(s) orientation:\(orientation)")
-                _size=s
-                if let v=rootView {
-                    v.size=s
+                _size = s
+                if let v = rootView {
+                    v.size = s
                 }
             }
         }
@@ -136,21 +138,21 @@ public class Viewport : NodeUI {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     private func dispatchLayout() {
-        var nloop=0
+        var nloop = 0
         while needsLayout {
-            _needsLayout=false
-            if let v=rootView {
+            _needsLayout = false
+            if let v = rootView {
                 if v.needsLayout {
                     v.dispatchLayout()
                 }
             }
             nloop += 1
-            if nloop>10 {
+            if nloop > 10 {
                 Debug.error("too many Viewport.dispatchLayout() recursions")
                 break
             }
         }
-        if nloop>1 {
+        if nloop > 1 {
             Debug.info("Viewport.dispatchLayout() recursion level: \(nloop)")
         }
     }
@@ -164,17 +166,21 @@ public class Viewport : NodeUI {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func draw(_ descriptor:MTLRenderPassDescriptor,drawable:CAMetalDrawable,depth:MTLTexture?=nil) {
+    public func draw(
+        _ descriptor: MTLRenderPassDescriptor, drawable: CAMetalDrawable, depth: MTLTexture? = nil
+    ) {
         nframes += 1
-        if let v=rootView {
+        if let v = rootView {
             needsRedraw = v.needsRedraw
             if !needsRedraw {
                 return
             }
-            let g=Graphics(viewport:self,descriptor:descriptor,drawable:drawable,depth:depth,clear:v.background)
-            render(g,view:v)
+            let g = Graphics(
+                viewport: self, descriptor: descriptor, drawable: drawable, depth: depth,
+                clear: v.background)
+            render(g, view: v)
             g.onDone { ok in
-                switch(ok) {
+                switch ok {
                 case .error(let message):
                     Debug.error("Viewport.draw(rootView): GPU error \(message)")
                 default:
@@ -182,9 +188,10 @@ public class Viewport : NodeUI {
                 }
             }
         } else if needsRedraw {
-            let g=Graphics(viewport:self,descriptor:descriptor,drawable:drawable,clear:Color.aeMagenta)
+            let g = Graphics(
+                viewport: self, descriptor: descriptor, drawable: drawable, clear: Color.aeMagenta)
             g.onDone { ok in
-                switch(ok) {
+                switch ok {
                 case .error(let message):
                     Debug.error("Viewport.draw(nil): GPU error \(message)")
                 default:
@@ -203,18 +210,22 @@ public class Viewport : NodeUI {
         }
          */
     }
-    var needsRedraw:Bool = true
-    public func pixPerfect(_ r:Rect) -> Rect {
-        return Rect(x: round(r.x / pixsize.w) * pixsize.w, y: round( r.y / pixsize.h) * pixsize.h, w: round(r.w / pixsize.w) * pixsize.w, h: round(r.h / pixsize.h) * pixsize.h)
+    var needsRedraw: Bool = true
+    public func pixPerfect(_ r: Rect) -> Rect {
+        return Rect(
+            x: round(r.x / pixsize.w) * pixsize.w, y: round(r.y / pixsize.h) * pixsize.h,
+            w: round(r.w / pixsize.w) * pixsize.w, h: round(r.h / pixsize.h) * pixsize.h)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    func render(_ g:Graphics,view:View,forced:Bool=false) {
-        if ((view.visible && view.color.a>0.01) || forced || view.drawMode == .surface) && view.size.width>0 && view.size.height>0 {
+    func render(_ g: Graphics, view: View, forced: Bool = false) {
+        if ((view.visible && view.color.a > 0.01) || forced || view.drawMode == .surface)
+            && view.size.width > 0 && view.size.height > 0
+        {
             var clipped = true
-            if let sv=view.superview {
+            if let sv = view.superview {
                 clipped = sv.clipping
             }
-            if !clipped || (g.clip.width>0.0001 && g.clip.height>0.0001) {
+            if !clipped || (g.clip.width > 0.0001 && g.clip.height > 0.0001) {
                 switch view.drawMode {
                 case .surface:
                     var newb = false
@@ -224,36 +235,41 @@ public class Viewport : NodeUI {
                             newb = true
                         }
                         if view.visible {
-                            g.draw(rect:view.bounds,image:bitmap,blend:.alpha)
+                            g.draw(rect: view.bounds, image: bitmap, blend: .alpha)
                         }
                     } else {
                         newb = true
                     }
-                    if newb && view.size.width>0 && view.size.height>0 {
+                    if newb && view.size.width > 0 && view.size.height > 0 {
                         view.needsRedraw = false
                         if view.surface == nil {
-                            view.draw(to:g)
+                            view.draw(to: g)
                             var subviews = view.subviews
                             if view.depthOrdering {
                                 subviews = Viewport.depthOrderedSubview(subviews)
                             }
                             for v in subviews {
-                                if let gg = Graphics(parent:g,matrix:v.matrixRender,clip:v.bounds,clipping:v.clipping) {
-                                    render(gg,view:v)
+                                if let gg = Graphics(
+                                    parent: g, matrix: v.matrixRender, clip: v.bounds,
+                                    clipping: v.clipping)
+                                {
+                                    render(gg, view: v)
                                 }
                             }
                             view.overlay(to: g)
                         }
-                        let b = Bitmap(parent:view,size:view.size,scale:self.scale)
-                        let gn = Graphics(image:b,clear:view.background ?? .transparent,depthClear:1)
-                        view.draw(to:gn)
+                        let b = Bitmap(parent: view, size: view.size, scale: self.scale)
+                        let gn = Graphics(
+                            image: b, clear: view.background ?? .transparent, depthClear: 1)
+                        view.draw(to: gn)
                         var subviews = view.subviews
                         if view.depthOrdering {
                             subviews = Viewport.depthOrderedSubview(subviews)
                         }
                         for v in subviews {
-                            if let gg = Graphics(parent:gn,matrix:v.matrixRender,clip:v.bounds) {
-                                self.render(gg,view:v)
+                            if let gg = Graphics(parent: gn, matrix: v.matrixRender, clip: v.bounds)
+                            {
+                                self.render(gg, view: v)
                             }
                         }
                         view.overlay(to: gn)
@@ -264,7 +280,7 @@ public class Viewport : NodeUI {
                                     self.ui {
                                         if e.attached && !e.computing {
                                             e.process(source: b).then { f in
-                                                if let br=f.result as? Bitmap {
+                                                if let br = f.result as? Bitmap {
                                                     if let ob = view.surface {
                                                         self.ui {
                                                             ob.detach()
@@ -281,7 +297,7 @@ public class Viewport : NodeUI {
                                                         b.detach()
                                                     }
                                                 } else if let err = f.result as? Error {
-                                                    Debug.error(err,#file,#line)
+                                                    Debug.error(err, #file, #line)
                                                     self.ui {
                                                         b.detach()
                                                     }
@@ -325,14 +341,14 @@ public class Viewport : NodeUI {
                     }
                     if let c = view.background {
                         if c.a == 1 {
-                            g.fill(rect:view.frame,color:c)
+                            g.fill(rect: view.frame, color: c)
                         } else {
-                            g.fill(rect:view.frame,blend:.alpha,color:c)
+                            g.fill(rect: view.frame, blend: .alpha, color: c)
                         }
                     }
                     view.draw(to: g)
-                    
-                    var opaques=[(rect:Rect,layer:Int)]()
+
+                    var opaques = [(rect: Rect, layer: Int)]()
                     var layer = 0
                     var subviews = view.subviews
                     if view.depthOrdering {
@@ -340,14 +356,17 @@ public class Viewport : NodeUI {
                     }
                     for v in subviews {
                         if v.opaque {
-                            opaques.enqueue((rect:v.frame,layer:layer))
+                            opaques.enqueue((rect: v.frame, layer: layer))
                         }
                         layer += 1
                     }
                     if opaques.count == 0 {
                         for v in subviews {
-                            if let gg = Graphics(parent:g,matrix:v.matrixRender,clip:v.bounds,clipping:v.clipping) {
-                                render(gg,view:v)
+                            if let gg = Graphics(
+                                parent: g, matrix: v.matrixRender, clip: v.bounds,
+                                clipping: v.clipping)
+                            {
+                                render(gg, view: v)
                             }
                         }
                     } else {
@@ -369,16 +388,16 @@ public class Viewport : NodeUI {
         }
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    static func depthOrderedSubview(_ views:[View]) -> [View] {
-        return views.sorted(by: { a,b -> Bool in
-            return a.transform.position.z>b.transform.position.z
+    static func depthOrderedSubview(_ views: [View]) -> [View] {
+        return views.sorted(by: { a, b -> Bool in
+            return a.transform.position.z > b.transform.position.z
         })
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func snapshot(view:View,_ fn:@escaping (Bitmap?)->()) {
-        let b = Bitmap(parent:self,size:view.size)
-        let g = Graphics(image:b,clear:view.background ?? Color.transparent)
-        render(g,view:view,forced:true)
+    public func snapshot(view: View, _ fn: @escaping (Bitmap?) -> Void) {
+        let b = Bitmap(parent: self, size: view.size)
+        let g = Graphics(image: b, clear: view.background ?? Color.transparent)
+        render(g, view: view, forced: true)
         g.onDone { ok in
             switch ok {
             case .success:
@@ -395,10 +414,12 @@ public class Viewport : NodeUI {
         }
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func snapshotDepth(view:View, _ fn:@escaping (Bitmap?)->()) {    // returns bitmap["depth"] with [Float32]
-        let b = Bitmap(parent:self,size:view.size)
-        let g = Graphics(image:b,clear:view.background ?? Color.transparent,depthClear:1.0,depthStore:true)
-        render(g,view:view,forced:true)
+    public func snapshotDepth(view: View, _ fn: @escaping (Bitmap?) -> Void) {  // returns bitmap["depth"] with [Float32]
+        let b = Bitmap(parent: self, size: view.size)
+        let g = Graphics(
+            image: b, clear: view.background ?? Color.transparent, depthClear: 1.0, depthStore: true
+        )
+        render(g, view: view, forced: true)
         g.onDone { ok in
             switch ok {
             case .success:
@@ -416,83 +437,90 @@ public class Viewport : NodeUI {
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func setFocus(_ view:View,focus:Bool) {
+    public func setFocus(_ view: View, focus: Bool) {
         if view != focusedView {
-            if let fv=focusedView, focus || ( !focus && fv == view) {
+            if let fv = focusedView, focus || (!focus && fv == view) {
                 fv.onFocus.dispatch(false)
             }
             if focus {
                 focusedView = view
                 view.onFocus.dispatch(true)
-                self.systemView.focus()
+                DispatchQueue.main.async {
+                    self.systemView.focus()
+                }
             }
         } else if !focus && view == focusedView {
             focusedView = nil
             view.onFocus.dispatch(false)
         }
     }
-    public func touches(_ touches:[TouchLocation]) {
+    public func touches(_ touches: [TouchLocation]) {
         onTouches.dispatch(touches)
-        if let v=rootView {
-            _ = v.touches(TouchLocation.transform(touches:touches,matrix:v.matrix))
+        if let v = rootView {
+            _ = v.touches(TouchLocation.transform(touches: touches, matrix: v.matrix))
         }
     }
-    public func mouse(_ mo:MouseOver) {
-        if let v=rootView {
+    public func mouse(_ mo: MouseOver) {
+        if let v = rootView {
             v.mouse(mo)
         }
     }
-    public func key(_ k:Key) {
+    public func key(_ k: Key) {
         onKey.dispatch(k)
-        if let v=focusedView {
+        if let v = focusedView {
             v.key(k)
-        } else if let v=rootView {
+        } else if let v = rootView {
             v.key(k)
         }
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func toggleFullScreen() {
+    @MainActor public func toggleFullScreen() {
         systemView.toggleFullScreen()
     }
-    public func captureBackButton(_ capture:Bool) {
+    @MainActor public func captureBackButton(_ capture: Bool) {
         systemView.captureBackButton(capture)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    init(systemView:SystemView,device:MTLDevice,size:Size,scale:Size=Size(1,1),pixsize:Size? = nil,threads:Bool = true) {
-        self.scale=scale
-        self.systemView=systemView
+    init(
+        systemView: SystemView, device: MTLDevice, size: Size, scale: Size = Size(1, 1),
+        pixsize: Size? = nil, threads: Bool = true
+    ) {
+        self.scale = scale
+        self.systemView = systemView
         if let ps = pixsize {
             self.pixsize = ps
         } else {
-            self.pixsize = Size(1,1)/scale
+            self.pixsize = Size(1, 1) / scale
         }
-        _textureCache = TextureCache(device:device)
-        super.init(parent:nil)
+        _textureCache = TextureCache(device: device)
+        super.init(parent: nil)
         Debug.warning("Viewport.init(\(size))  orientation:\(self.orientation)")
-        gpu.device=device
-        gpu.loader=MTKTextureLoader(device:device)
-        _size=size
-        gpu.library=ProgramLibrary(parent:self,filename:"default")
-        gpu.buffers=Buffers(viewport:self)
+        gpu.device = device
+        gpu.loader = MTKTextureLoader(device: device)
+        _size = size
+        gpu.library = ProgramLibrary(parent: self, filename: "default")
+        gpu.buffers = Buffers(viewport: self)
         Graphics.globals(self)
         Renderer.globals(self)
         Effect.globals(self)
         if threads {
-            let nt = max(1,ProcessInfo.processInfo.activeProcessorCount/3)
-            _bg = Worker(parent:self,threads: nt,debugName: "bg")
-            _io = Worker(parent:self,threads: nt,debugName: "io")
-            _zz = Worker(parent:self,threads: 1,debugName: "zz")
-            Debug.warning("Workers launched, bg:\(nt) io:\(nt) zz:1 cpus:\(ProcessInfo.processInfo.activeProcessorCount)")
+            let nt = max(1, ProcessInfo.processInfo.activeProcessorCount / 3)
+            _bg = Worker(parent: self, threads: nt, debugName: "bg")
+            _io = Worker(parent: self, threads: nt, debugName: "io")
+            _zz = Worker(parent: self, threads: 1, debugName: "zz")
+            Debug.warning(
+                "Workers launched, bg:\(nt) io:\(nt) zz:1 cpus:\(ProcessInfo.processInfo.activeProcessorCount)"
+            )
             refreshThread()
         }
-        Thread.current["ui.thread"]=true
+        Thread.current["ui.thread"] = true
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public override func detach() {
         //Debug.info("Viewport.detach()")
-        if let v=self.rootView {
+        if let v = self.rootView {
             v.detach()
             self.rootView = nil
         }
@@ -516,7 +544,7 @@ public class Viewport : NodeUI {
         //Atom.debugInfo()
         Debug.info("Viewport detached")
     }
-    public var uiThread : Bool {
+    public var uiThread: Bool {
         if let b = Thread.current["ui.thread"] as? Bool {
             return b
         }
@@ -524,39 +552,40 @@ public class Viewport : NodeUI {
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    func clean(_ inheritor:NodeUI) {
+    func clean(_ inheritor: NodeUI) {
         if focusedView == inheritor {
             focusedView = nil
         }
         cancelJobs(inheritor)
         refreshLock.sync {
-            self.refreshers = self.refreshers.filter({ (r:(owner: NodeUI, action: Action<Void>)) -> Bool in
+            self.refreshers = self.refreshers.filter({
+                (r: (owner: NodeUI, action: Action<Void>)) -> Bool in
                 return r.owner != inheritor
             })
         }
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    var _bg:Worker?=nil
-    var _io:Worker?=nil
-    var _zz:Worker?=nil
-    public var bg:Worker {
+    var _bg: Worker? = nil
+    var _io: Worker? = nil
+    var _zz: Worker? = nil
+    public var bg: Worker {
         return _bg!
     }
-    public var io:Worker {
+    public var io: Worker {
         return _io!
     }
-    public var zz:Worker {
+    public var zz: Worker {
         return _zz!
     }
-    public func cancelJobs(_ owner:NodeUI) {
+    public func cancelJobs(_ owner: NodeUI) {
         _bg?.cancel(owner)
         _io?.cancel(owner)
         _zz?.cancel(owner)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func refresh(_ owner:NodeUI,action:@escaping ()->()) {
+    public func refresh(_ owner: NodeUI, action: @escaping () -> Void) {
         if release {
             return
         }
@@ -569,14 +598,14 @@ public class Viewport : NodeUI {
                     return
                 }
             }
-            self.refreshers.enqueue((owner:owner,action:Action<Void>(action)))
+            self.refreshers.enqueue((owner: owner, action: Action<Void>(action)))
         }
     }
     func refreshThread() {
-        let _=Thread(name: "Viewport.refresh") {
-            var frame:Int=0
-            var bgCount:Int=0
-            var ioCount:Int=0
+        let _ = Thread(name: "Viewport.refresh") {
+            var frame: Int = 0
+            var bgCount: Int = 0
+            var ioCount: Int = 0
             while !self.release {
                 while self.nframes == frame {
                     Thread.sleep(0.01)
@@ -586,12 +615,12 @@ public class Viewport : NodeUI {
                 }
                 let mt = 0.5 / 60
                 let t = ß.time
-                
+
                 bgCount = max(bgCount, self._bg!.count)
                 ioCount = max(ioCount, self._io!.count)
-                
-                while ß.time-t<mt {
-                    var todo = [(owner:NodeUI,action:Action<Void>)]()
+
+                while ß.time - t < mt {
+                    var todo = [(owner: NodeUI, action: Action<Void>)]()
                     self.refreshLock.sync {
                         if self.release {
                             return
@@ -601,18 +630,18 @@ public class Viewport : NodeUI {
                             bgCount = 0
                             ioCount = 0
                         }
-                        if let r=self.refreshers.dequeue() {
+                        if let r = self.refreshers.dequeue() {
                             todo.append(r)
                         }
                     }
-                    if todo.count==0 {
+                    if todo.count == 0 {
                         break
                     }
                     for r in todo {
                         r.action.invoke(())
                     }
                 }
-                frame=self.nframes
+                frame = self.nframes
             }
         }
     }
@@ -622,18 +651,18 @@ public class Viewport : NodeUI {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-public protocol SystemView {
+@MainActor public protocol SystemView {
     func focus()
     func toggleFullScreen()
-    func captureBackButton(_ capture:Bool)
-    var title : String {
+    func captureBackButton(_ capture: Bool)
+    var title: String {
         get
         set
     }
-    var orientation : Orientation {
+    var orientation: Orientation {
         get
     }
-    var pauseRefresh : Bool {
+    var pauseRefresh: Bool {
         get
         set
     }
@@ -641,4 +670,3 @@ public protocol SystemView {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-

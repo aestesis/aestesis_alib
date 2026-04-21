@@ -4,23 +4,23 @@
 //
 //  Created by renan jegouzo on 05/12/2023.
 //
+@preconcurrency
 
 import AVFoundation
 import Cocoa
 
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-extension AudioDevice  {
-    
-    //let id: AudioDeviceID
-    //let name: String
-    //let manufacturer: String
-    //let inputChannels: [String]
-    //let outputChannels: [String]
-    
+struct AudioDevice {
+    let id: AudioDeviceID
+    let name: String
+    let manufacturer: String
+    let inputChannels: [String]
+    let outputChannels: [String]
+
     // https://developer.apple.com/forums/thread/71008
     // https://forum.juce.com/t/how-to-fix-the-channel-names-of-coreaudio-devices/12349
-    func open(leftChannel: Int, rightChannel: Int = -1, fps:Double = 60) throws -> Stream<Float> {
+    func open(leftChannel: Int, rightChannel: Int = -1, fps: Double = 60) throws -> Stream<Float> {
         // TODO: debug, suxx if selected input not the same than system default input
         // forum https://forums.developer.apple.com/forums/thread/71008
         let engine = AVAudioEngine()
@@ -32,17 +32,19 @@ extension AudioDevice  {
         // use core audio low level call to set the input device:
         var inputDeviceID: AudioDeviceID = UInt32(id)
         AudioUnitSetProperty(
-            inputUnit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0, &inputDeviceID,
+            inputUnit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0,
+            &inputDeviceID,
             UInt32(MemoryLayout<AudioDeviceID>.size))
-        
-        var inNumberFrames:UInt32 = UInt32(44100 / fps);
-        let propSize:UInt32 = UInt32(MemoryLayout<UInt32>.size);
-        AudioUnitSetProperty(inputUnit,
-                             kAudioDevicePropertyBufferFrameSize,
-                             kAudioUnitScope_Input,
-                             0,
-                             &inNumberFrames,
-                             propSize);
+
+        var inNumberFrames: UInt32 = UInt32(44100 / fps)
+        let propSize: UInt32 = UInt32(MemoryLayout<UInt32>.size)
+        AudioUnitSetProperty(
+            inputUnit,
+            kAudioDevicePropertyBufferFrameSize,
+            kAudioUnitScope_Input,
+            0,
+            &inNumberFrames,
+            propSize)
         /*
          // https://android.googlesource.com/platform/external/qemu/+/emu-master-dev/audio/coreaudio.c
          var addr = AudioObjectPropertyAddress(mSelector: kAudioDevicePropertyBufferFrameSize, mScope: kAudioDevicePropertyScopeInput, mElement: kAudioObjectPropertyElementMain)
@@ -54,19 +56,23 @@ extension AudioDevice  {
          &inNumberFrames);
          */
         let stream = BufferedStream<Float>()
-        
+
         let inputFormat = inputNode.inputFormat(forBus: 0)
         let outputFormat = AVAudioFormat(
             commonFormat: .pcmFormatFloat32, sampleRate: 44100, channels: 2, interleaved: true)!
         guard let converter = AVAudioConverter(from: inputFormat, to: outputFormat) else {
             throw AudioError.audioConverterError
         }
-        converter.channelMap[0] = NSNumber(value: min(leftChannel,inputChannels.count-1))
-        converter.channelMap[1] = NSNumber(value: min(rightChannel >= 0 ? rightChannel : leftChannel,inputChannels.count-1))
-        
-        let sinkNode = AVAudioSinkNode() { (timestamp, frames, audioBufferList) -> OSStatus in
+        converter.channelMap[0] = NSNumber(value: min(leftChannel, inputChannels.count - 1))
+        converter.channelMap[1] = NSNumber(
+            value: min(rightChannel >= 0 ? rightChannel : leftChannel, inputChannels.count - 1))
+
+        let sinkNode = AVAudioSinkNode { (timestamp, frames, audioBufferList) -> OSStatus in
             //print("SINK: \(timestamp.pointee.mHostTime) - \(frames) - \(audioBufferList.pointee.mNumberBuffers)")
-            guard let buffer = AVAudioPCMBuffer(pcmFormat: inputFormat,bufferListNoCopy: audioBufferList) else {
+            guard
+                let buffer = AVAudioPCMBuffer(
+                    pcmFormat: inputFormat, bufferListNoCopy: audioBufferList)
+            else {
                 Debug.warning("AVAudioPCMBuffer format mismatch")
                 stream.close()  // new: added 2024.08.02, needs verifying if working
                 return noErr
@@ -75,12 +81,20 @@ extension AudioDevice  {
                 outStatus.pointee = AVAudioConverterInputStatus.haveData
                 return buffer
             }
-            let targetFrameCapacity = AVAudioFrameCount(outputFormat.sampleRate) * buffer.frameLength / AVAudioFrameCount(buffer.format.sampleRate)
-            if let convertedBuffer = AVAudioPCMBuffer(pcmFormat: outputFormat, frameCapacity: targetFrameCapacity) {
+            let targetFrameCapacity =
+                AVAudioFrameCount(outputFormat.sampleRate) * buffer.frameLength
+                / AVAudioFrameCount(buffer.format.sampleRate)
+            if let convertedBuffer = AVAudioPCMBuffer(
+                pcmFormat: outputFormat, frameCapacity: targetFrameCapacity)
+            {
                 var error: NSError?
-                let status = converter.convert(to: convertedBuffer, error: &error, withInputFrom: inputBlock)
+                let status = converter.convert(
+                    to: convertedBuffer, error: &error, withInputFrom: inputBlock)
                 assert(status != .error)
-                let audioData = [Float](UnsafeBufferPointer(start: convertedBuffer.floatChannelData?[0], count: Int(convertedBuffer.frameLength)*convertedBuffer.stride))
+                let audioData = [Float](
+                    UnsafeBufferPointer(
+                        start: convertedBuffer.floatChannelData?[0],
+                        count: Int(convertedBuffer.frameLength) * convertedBuffer.stride))
                 if stream.write(audioData, offset: 0, count: audioData.count) != audioData.count {
                     Debug.error("AudioDevice: input skipping, buffer full")
                 }
@@ -99,7 +113,7 @@ extension AudioDevice  {
     }
     // audio engine https://developer.apple.com/documentation/avfaudio/avaudioengine
     // audio sink https://developer.apple.com/documentation/avfaudio/avaudiosinknode
-    
+
     static var devices: [AudioDevice] {
         var devices = [AudioDevice]()
         var propertySize: UInt32 = 0
@@ -139,7 +153,7 @@ extension AudioDevice  {
             var deviceManufacturer: String = "No name"
             var inputChannels: Int = 0
             var outputChannels: Int = 0
-            
+
             // Get device name
             propertyAddress.mSelector = kAudioDevicePropertyDeviceNameCFString
             propertySize = UInt32(MemoryLayout<CFString>.size)
@@ -177,7 +191,8 @@ extension AudioDevice  {
             // Get input channels
             propertyAddress.mSelector = kAudioDevicePropertyStreamConfiguration
             propertyAddress.mScope = kAudioDevicePropertyScopeInput
-            status = AudioObjectGetPropertyDataSize(deviceID, &propertyAddress, 0, nil, &propertySize)
+            status = AudioObjectGetPropertyDataSize(
+                deviceID, &propertyAddress, 0, nil, &propertySize)
             if status == noErr {
                 let bufferListPointer = UnsafeMutablePointer<AudioBufferList>.allocate(capacity: 1)
                 defer { bufferListPointer.deallocate() }
@@ -192,7 +207,8 @@ extension AudioDevice  {
             }
             // Get output channels
             propertyAddress.mScope = kAudioDevicePropertyScopeOutput
-            status = AudioObjectGetPropertyDataSize(deviceID, &propertyAddress, 0, nil, &propertySize)
+            status = AudioObjectGetPropertyDataSize(
+                deviceID, &propertyAddress, 0, nil, &propertySize)
             if status == noErr {
                 let bufferListPointer = UnsafeMutablePointer<AudioBufferList>.allocate(capacity: 1)
                 defer { bufferListPointer.deallocate() }
@@ -255,18 +271,21 @@ extension AudioDevice  {
                     outputChannelNames.append(chanName)
                 }
             }
-            
-            devices.append(AudioDevice(id: Int64(deviceID), name: deviceName, manufacturer: deviceManufacturer,inputChannels: inputChannelNames, outputChannels: outputChannelNames))
+
+            devices.append(
+                AudioDevice(
+                    id: deviceID, name: deviceName, manufacturer: deviceManufacturer,
+                    inputChannels: inputChannelNames, outputChannels: outputChannelNames))
         }
         return devices
     }
-    
-    static func getDevice(id:Int64) -> AudioDevice? {
-        return devices.first(where: { $0.id == id})
+
+    static func getDevice(id: Int64) -> AudioDevice? {
+        return devices.first(where: { $0.id == id })
     }
-    
-    static func getDevice(name:String) -> AudioDevice? {
-        return devices.first(where: { $0.name == name})
+
+    static func getDevice(name: String) -> AudioDevice? {
+        return devices.first(where: { $0.name == name })
     }
 }
 

@@ -20,15 +20,16 @@
 import Foundation
 import MetalKit
 import simd
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-public struct Point : CustomStringConvertible,JsonConvertible {
+public struct Point: CustomStringConvertible, JsonConvertible, @unchecked Sendable {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public var xy:SIMD2<Double> = SIMD2<Double>()
-    public var x:Double {
+    public var xy: SIMD2<Double> = SIMD2<Double>()
+    public var x: Double {
         get {
             return xy.x
         }
@@ -36,7 +37,7 @@ public struct Point : CustomStringConvertible,JsonConvertible {
             xy.x = v
         }
     }
-    public var y:Double {
+    public var y: Double {
         get {
             return xy.y
         }
@@ -46,186 +47,186 @@ public struct Point : CustomStringConvertible,JsonConvertible {
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public var angle : Double {
-        return atan2(y,x)
+    public var angle: Double {
+        return atan2(y, x)
     }
     public var ceil: Point {
-        return Point(Foundation.ceil(self.x),Foundation.ceil(y))
+        return Point(Foundation.ceil(self.x), Foundation.ceil(y))
     }
-    public var description : String {
+    public var description: String {
         return "{x:\(x),y:\(y)}"
     }
     public var floor: Point {
-        return Point(Foundation.floor(self.x),Foundation.floor(y))
+        return Point(Foundation.floor(self.x), Foundation.floor(y))
     }
     public var int: PointI {
-        return PointI(x:Int(x),y:Int(y))
+        return PointI(x: Int(x), y: Int(y))
     }
-    public var infloat2 : SIMD2<Float> {
-        return SIMD2<Float>([Float(x),Float(y)])
+    public var infloat2: SIMD2<Float> {
+        return SIMD2<Float>([Float(x), Float(y)])
     }
-    public var infloat3 : SIMD3<Float> {
-        return SIMD3<Float>([Float(x),Float(y),Float(0)])
+    public var infloat3: SIMD3<Float> {
+        return SIMD3<Float>([Float(x), Float(y), Float(0)])
     }
-    public var length:Double {
-        return sqrt(x*x+y*y);
+    public var length: Double {
+        return sqrt(x * x + y * y)
     }
-    public func lerp(_ to:Point,coef:Double) -> Point {
-        return  self + (to-self) * coef    // Point(to.x*coef+x*(1-coef),to.y*coef+y*(1-coef))
+    public func lerp(_ to: Point, coef: Double) -> Point {
+        return self + (to - self) * coef  // Point(to.x*coef+x*(1-coef),to.y*coef+y*(1-coef))
     }
-    public func lerp(_ to:Point,coef:Signal) -> Point {
-        return self.lerp(to,coef:coef.value)
+    public func lerp(_ to: Point, coef: Signal) -> Point {
+        return self.lerp(to, coef: coef.value)
     }
-    public var normalize:Point {
-        return Point(x/length,y/length)
+    public var normalize: Point {
+        return Point(x / length, y / length)
     }
-    public func rect(w:Double,h:Double) -> Rect {
-        return Rect(x:x-w*0.5,y:y-h*0.5,w:w,h:h)
+    public func rect(w: Double, h: Double) -> Rect {
+        return Rect(x: x - w * 0.5, y: y - h * 0.5, w: w, h: h)
     }
-    public func rect(_ s:Size) -> Rect {
-        return Rect(x:x-s.w*0.5,y:y-s.h*0.5,w:s.w,h:s.h)
+    public func rect(_ s: Size) -> Rect {
+        return Rect(x: x - s.w * 0.5, y: y - s.h * 0.5, w: s.w, h: s.h)
     }
     public var round: Point {
-        return Point(Foundation.round(self.x),Foundation.round(y))
+        return Point(Foundation.round(self.x), Foundation.round(y))
     }
     public var json: JSON {
-        return JSON(["x":x,"y":y])
+        return JSON(["x": x, "y": y])
     }
     public var size: Size {
-        return Size(x,y)
+        return Size(x, y)
     }
-    public func translate(_ x:Double,_ y:Double) -> Point {
-        return self + Point(x,y)
+    public func translate(_ x: Double, _ y: Double) -> Point {
+        return self + Point(x, y)
     }
-    public func translate(_ point:Point) -> Point {
-        return self+point // Point(self.x+point.x,self.y+point.y)
+    public func translate(_ point: Point) -> Point {
+        return self + point  // Point(self.x+point.x,self.y+point.y)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public init(_ p:Vec3) {
-        x=p.x
-        y=p.y
+    public init(_ p: Vec3) {
+        x = p.x
+        y = p.y
     }
-    public init(_ p:CGPoint) {
-        x=Double(p.x)
-        y=Double(p.y)
+    public init(_ p: CGPoint) {
+        x = Double(p.x)
+        y = Double(p.y)
     }
-    public init(_ p:PointI) {
-        x=Double(p.x)
-        y=Double(p.y)
+    public init(_ p: PointI) {
+        x = Double(p.x)
+        y = Double(p.y)
     }
-    public init(_ x:Double=0,_ y:Double=0) {
-        self.x=x
-        self.y=y
+    public init(_ x: Double = 0, _ y: Double = 0) {
+        self.x = x
+        self.y = y
     }
-    public init(x:Double=0,y:Double=0) {
-        self.x=x
-        self.y=y
+    public init(x: Double = 0, y: Double = 0) {
+        self.x = x
+        self.y = y
     }
-    public init(_ p:Point) {
-        xy=p.xy
+    public init(_ p: Point) {
+        xy = p.xy
     }
-    public init(p:PointI) {
-        x=Double(p.x)
-        y=Double(p.y)
+    public init(p: PointI) {
+        x = Double(p.x)
+        y = Double(p.y)
     }
-    public init(angle:Double,radius:Double=1) {
-        x=cos(angle)*radius
-        y=sin(angle)*radius
+    public init(angle: Double, radius: Double = 1) {
+        x = cos(angle) * radius
+        y = sin(angle) * radius
     }
     public init(json: JSON) {
-        if let jx=json["x"].double {
-            x=jx
+        if let jx = json["x"].double {
+            x = jx
         } else {
-            x=0
+            x = 0
         }
-        if let jy=json["y"].double {
-            y=jy
+        if let jy = json["y"].double {
+            y = jy
         } else {
-            y=0
+            y = 0
         }
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public var system : CGPoint {
-        return CGPoint(x:CGFloat(x),y:CGFloat(y))
+    public var system: CGPoint {
+        return CGPoint(x: CGFloat(x), y: CGFloat(y))
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public static let zero:Point=Point(0,0)
-    public static let unity:Point=Point(1,1)
-    public static let infinity:Point=Point(Double.infinity,Double.infinity)
+    public static let zero: Point = Point(0, 0)
+    public static let unity: Point = Point(1, 1)
+    public static let infinity: Point = Point(Double.infinity, Double.infinity)
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-public func ==(lhs:Point, rhs: Point) -> Bool {
-    return (lhs.x==rhs.x)&&(lhs.y==rhs.y)
+public func == (lhs: Point, rhs: Point) -> Bool {
+    return (lhs.x == rhs.x) && (lhs.y == rhs.y)
 }
-public func !=(lhs:Point, rhs: Point) -> Bool {
-    return (lhs.x != rhs.x)||(lhs.y != rhs.y)
+public func != (lhs: Point, rhs: Point) -> Bool {
+    return (lhs.x != rhs.x) || (lhs.y != rhs.y)
 }
-public func +=(left:inout Point,right:Point) {
+public func += (left: inout Point, right: Point) {
     left = left + right
 }
-public func -=(left:inout Point,right:Point) {
+public func -= (left: inout Point, right: Point) {
     left = left - right
 }
-public func +(lhs: Point, rhs: Point) -> Point {
-    return Point((lhs.x+rhs.x),(lhs.y+rhs.y))
+public func + (lhs: Point, rhs: Point) -> Point {
+    return Point((lhs.x + rhs.x), (lhs.y + rhs.y))
 }
-public func -(lhs: Point, rhs: Point) -> Point {
-    return Point((lhs.x-rhs.x),(lhs.y-rhs.y))
+public func - (lhs: Point, rhs: Point) -> Point {
+    return Point((lhs.x - rhs.x), (lhs.y - rhs.y))
 }
-public prefix func -(lhs: Point) -> Point {
-    return Point(-lhs.x,-lhs.y)
+public prefix func - (lhs: Point) -> Point {
+    return Point(-lhs.x, -lhs.y)
 }
-public func *(lhs: Point, rhs: Point) -> Point {
-    return Point((lhs.x*rhs.x),(lhs.y*rhs.y))
+public func * (lhs: Point, rhs: Point) -> Point {
+    return Point((lhs.x * rhs.x), (lhs.y * rhs.y))
 }
-public func *(lhs: Point, rhs: Double) -> Point {
-    return Point((lhs.x*rhs),(lhs.y*rhs))
+public func * (lhs: Point, rhs: Double) -> Point {
+    return Point((lhs.x * rhs), (lhs.y * rhs))
 }
-public func /(lhs: Point, rhs: Point) -> Point {
-    return Point((lhs.x/rhs.x),(lhs.y/rhs.y))
+public func / (lhs: Point, rhs: Point) -> Point {
+    return Point((lhs.x / rhs.x), (lhs.y / rhs.y))
 }
-public func /(lhs: Point, rhs: Double) -> Point {
-    return Point((lhs.x/rhs),(lhs.y/rhs))
+public func / (lhs: Point, rhs: Double) -> Point {
+    return Point((lhs.x / rhs), (lhs.y / rhs))
 }
-public func *(lhs: Point, rhs: Size) -> Point {
-    return Point((lhs.x*rhs.w),(lhs.y*rhs.h))
+public func * (lhs: Point, rhs: Size) -> Point {
+    return Point((lhs.x * rhs.w), (lhs.y * rhs.h))
 }
-public func /(lhs: Point, rhs: Size) -> Point {
-    return Point((lhs.x/rhs.w),(lhs.y/rhs.h))
+public func / (lhs: Point, rhs: Size) -> Point {
+    return Point((lhs.x / rhs.w), (lhs.y / rhs.h))
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-public struct PointI : CustomStringConvertible,JsonConvertible {
+public struct PointI: CustomStringConvertible, JsonConvertible, @unchecked Sendable {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public var x:Int
-    public var y:Int
+    public var x: Int
+    public var y: Int
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public var description : String {
+    public var description: String {
         return "{x:\(x),y:\(y)}"
     }
     public var json: JSON {
-        return JSON([x:x,y:y])
+        return JSON([x: x, y: y])
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public init(_ x:Int,_ y:Int) {
-        self.x=x;
-        self.y=y;
+    public init(_ x: Int, _ y: Int) {
+        self.x = x
+        self.y = y
     }
-    public init(x:Int=0,y:Int=0) {
-        self.x=x;
-        self.y=y;
+    public init(x: Int = 0, y: Int = 0) {
+        self.x = x
+        self.y = y
     }
     public init(json: JSON) {
         x = json["x"].intValue
@@ -233,8 +234,8 @@ public struct PointI : CustomStringConvertible,JsonConvertible {
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public static var zero:PointI=PointI(x:0,y:0);
-    public static var unity:PointI=PointI(x:1,y:1);
+    public static let zero: PointI = PointI(x: 0, y: 0)
+    nonisolated(unsafe) public static let unity: PointI = PointI(x: 1, y: 1)
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
 }
@@ -242,31 +243,29 @@ public struct PointI : CustomStringConvertible,JsonConvertible {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-public func ==(lhs: PointI, rhs: PointI) -> Bool {
-    return (lhs.x==rhs.x)&&(lhs.y==rhs.y);
+public func == (lhs: PointI, rhs: PointI) -> Bool {
+    return (lhs.x == rhs.x) && (lhs.y == rhs.y)
 }
-public func +(lhs: PointI, rhs: PointI) -> PointI {
-    return PointI(x:(lhs.x+rhs.x),y:(lhs.y+rhs.y));
+public func + (lhs: PointI, rhs: PointI) -> PointI {
+    return PointI(x: (lhs.x + rhs.x), y: (lhs.y + rhs.y))
 }
-public func -(lhs: PointI, rhs: PointI) -> PointI {
-    return PointI(x:(lhs.x-rhs.x),y:(lhs.y-rhs.y));
+public func - (lhs: PointI, rhs: PointI) -> PointI {
+    return PointI(x: (lhs.x - rhs.x), y: (lhs.y - rhs.y))
 }
-public func *(lhs: PointI, rhs: PointI) -> PointI {
-    return PointI(x:(lhs.x*rhs.x),y:(lhs.y*rhs.y));
+public func * (lhs: PointI, rhs: PointI) -> PointI {
+    return PointI(x: (lhs.x * rhs.x), y: (lhs.y * rhs.y))
 }
-public func *(lhs: PointI, rhs: Int) -> PointI {
-    return PointI(x:(lhs.x*rhs),y:(lhs.y*rhs));
+public func * (lhs: PointI, rhs: Int) -> PointI {
+    return PointI(x: (lhs.x * rhs), y: (lhs.y * rhs))
 }
-public func /(lhs: PointI, rhs: PointI) -> PointI {
-    return PointI(x:(lhs.x/rhs.x),y:(lhs.y/rhs.y));
+public func / (lhs: PointI, rhs: PointI) -> PointI {
+    return PointI(x: (lhs.x / rhs.x), y: (lhs.y / rhs.y))
 }
-public func /(lhs: PointI, rhs: Int) -> PointI {
-    return PointI(x:(lhs.x/rhs),y:(lhs.y/rhs));
+public func / (lhs: PointI, rhs: Int) -> PointI {
+    return PointI(x: (lhs.x / rhs), y: (lhs.y / rhs))
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-

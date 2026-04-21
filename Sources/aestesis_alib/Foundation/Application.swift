@@ -36,13 +36,13 @@ public class Application {
     }
     #endif
     //public static let events = MultiEvent<String>()
-    public static var launches : Int = 0
-    public static var author:String = "aestesis"
+    nonisolated(unsafe) public static var launches : Int = 0
+    nonisolated(unsafe) public static var author:String = "aestesis"
     public static let onPause=Event<Void>()
     public static let onResume=Event<Void>()
     public static let onStop=Event<Void>()
-    public static var live=[String:Any]()
-    public static var db=Application()
+    nonisolated(unsafe) public static var live=[String:Any]()
+    nonisolated(unsafe) public static var db=Application()
     public static var id:String {
         return Bundle.main.bundleIdentifier!
     }

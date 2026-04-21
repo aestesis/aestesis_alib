@@ -19,7 +19,7 @@
 
 import Foundation
 
-public class Thread: Atom {
+public class Thread: Atom, @unchecked Sendable {
     var nst: Foundation.Thread?
     init(nst: Foundation.Thread) {
         self.nst = nst
@@ -51,7 +51,7 @@ public class Thread: Atom {
             a.invoke(())
         }
     }
-    public init(name:String? = nil, _ fn: @escaping () -> Void) {
+    public init(name: String? = nil, _ fn: @escaping () -> Void) {
         super.init()
         nst = Foundation.Thread(target: self, selector: #selector(darun), object: Action<Void>(fn))
         if let name = name {
@@ -74,22 +74,28 @@ public class Thread: Atom {
         get { return nst!.threadPriority }
         set(p) { nst!.threadPriority = p }
     }
-    var name:String {
+    var name: String {
         get {
             return nst!.name ?? "unnamed"
         }
-        set (name) {
+        set(name) {
             nst!.name = name
         }
+    }
+    public var isMainThread: Bool {
+        return Foundation.Thread.isMainThread
+    }
+    public static var isMainThread: Bool {
+        return Foundation.Thread.isMainThread
     }
 }
 
 public class SynchronizedValue<T> {
     private let accessQueue = DispatchQueue(label: "SynchronizedValueAccess")
-    private var _value:T?
-    var value:T? {
+    private var _value: T?
+    var value: T? {
         get {
-            var v:T?
+            var v: T?
             accessQueue.sync {
                 v = _value
             }
@@ -103,17 +109,17 @@ public class SynchronizedValue<T> {
     }
 }
 
-
 public class SynchronizedArray<T> {
     private var array: [T] = []
-    private let accessQueue = DispatchQueue(label: "SynchronizedArrayAccess", attributes: .concurrent)
-    
+    private let accessQueue = DispatchQueue(
+        label: "SynchronizedArrayAccess", attributes: .concurrent)
+
     public func append(_ newElement: T) {
         self.accessQueue.async(flags: .barrier) {
             self.array.append(newElement)
         }
     }
-    
+
     public func remove(at index: Int) -> T {
         var element: T?
         self.accessQueue.sync(flags: .barrier) {
@@ -121,7 +127,7 @@ public class SynchronizedArray<T> {
         }
         return element!
     }
-    
+
     public var count: Int {
         var count = 0
         self.accessQueue.sync {
@@ -138,24 +144,20 @@ public class SynchronizedArray<T> {
         return isEmpty
     }
 
-    public var first:T? {
-        get {
-            var element: T?
-            self.accessQueue.sync {
-                element = self.array.first
-            }
-            return element
+    public var first: T? {
+        var element: T?
+        self.accessQueue.sync {
+            element = self.array.first
         }
+        return element
     }
 
-    public var last:T? {
-        get {
-            var element: T?
-            self.accessQueue.sync {
-                element = self.array.last
-            }
-            return element
+    public var last: T? {
+        var element: T?
+        self.accessQueue.sync {
+            element = self.array.last
         }
+        return element
     }
 
     public func removeLast() -> T {
@@ -166,7 +168,7 @@ public class SynchronizedArray<T> {
         return element!
 
     }
-    
+
     public subscript(index: Int) -> T {
         set {
             self.accessQueue.async(flags: .barrier) {
@@ -181,7 +183,7 @@ public class SynchronizedArray<T> {
             return element
         }
     }
-    
+
     func push(_ newElement: T) {
         self.append(newElement)
     }
@@ -195,7 +197,7 @@ public class SynchronizedArray<T> {
         self.append(newElement)
     }
     func dequeue() -> T? {
-        if count>0 {
+        if count > 0 {
             return self.remove(at: 0)
         } else {
             return nil
@@ -206,36 +208,36 @@ public class SynchronizedArray<T> {
     }
 }
 
-public class SynchronizedDictionnary<TK:Hashable, TV> : Collection {
+public class SynchronizedDictionnary<TK: Hashable, TV>: Collection {
     private let accessQueue: DispatchQueue = DispatchQueue(
         label: "SynchronizedDictionaryAccess", qos: .userInteractive, attributes: .concurrent)
     private var dictionary: [TK: TV]
-    
+
     var keys: Dictionary<TK, TV>.Keys {
         self.accessQueue.sync {
             return self.dictionary.keys
         }
     }
-    
+
     var values: Dictionary<TK, TV>.Values {
         self.accessQueue.sync {
             return self.dictionary.values
         }
     }
-    
+
     public var startIndex: Dictionary<TK, TV>.Index {
         self.accessQueue.sync {
             return self.dictionary.startIndex
         }
     }
-    
+
     public var endIndex: Dictionary<TK, TV>.Index {
         self.accessQueue.sync {
             return self.dictionary.endIndex
         }
     }
-    
-    init(dict: [TK: TV] = [TK:TV]()) {
+
+    init(dict: [TK: TV] = [TK: TV]()) {
         self.dictionary = dict
     }
     public func removeAll() {
@@ -244,7 +246,7 @@ public class SynchronizedDictionnary<TK:Hashable, TV> : Collection {
         }
     }
     public func removeValue(forKey: TK) {
-        accessQueue.async(flags:.barrier) { [weak self] in
+        accessQueue.async(flags: .barrier) { [weak self] in
             self?.dictionary.removeValue(forKey: forKey)
         }
     }
@@ -253,7 +255,7 @@ public class SynchronizedDictionnary<TK:Hashable, TV> : Collection {
             return self.dictionary[index]
         }
     }
-    public subscript(@Sendable key: TK) -> TV? {
+    public subscript(key: TK) -> TV? {
         set {
             accessQueue.async(flags: .barrier) {
                 self.dictionary[key] = newValue
@@ -295,14 +297,14 @@ public class SynchronizedDictionnary<TK:Hashable, TV> : Collection {
         }
         return dico
     }
-    public func has(key:TK) -> Bool {
+    public func has(key: TK) -> Bool {
         var r = false
         accessQueue.sync {
             r = dictionary.has(key: key)
         }
         return r
     }
-    
+
     // this is because it is an apple protocol method
     // swiftlint:disable identifier_name
     public func index(after i: Dictionary<TK, TV>.Index) -> Dictionary<TK, TV>.Index {
@@ -311,9 +313,7 @@ public class SynchronizedDictionnary<TK:Hashable, TV> : Collection {
         }
     }
     // swiftlint:enable identifier_name
-    
-    
-    
+
     /*
      public func append(newElement: T) {
      dictionary.
@@ -321,13 +321,13 @@ public class SynchronizedDictionnary<TK:Hashable, TV> : Collection {
      self.array.append(newElement)
      }
      }
-     
+    
      public func removeAtIndex(index: Int) {
      self.accessQueue.async(flags:.barrier) {
      self.array.remove(at: index)
      }
      }
-     
+    
      public var count: Int {
      var count = 0
      self.accessQueue.sync {
@@ -335,7 +335,7 @@ public class SynchronizedDictionnary<TK:Hashable, TV> : Collection {
      }
      return count
      }
-     
+    
      public func first() -> T? {
      var element: T?
      self.accessQueue.sync {

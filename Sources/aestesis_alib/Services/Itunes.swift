@@ -10,9 +10,9 @@ import Foundation
 
 // Sendable conformance disabled for credentials storage
 // Credentials are set once and only changed via @MainActor
-@_unchecked class Itunes {
-    public static var key = ""
-    public static var secret = ""
+class Itunes {
+    nonisolated(unsafe) static var key = ""
+    nonisolated(unsafe) static var secret = ""
     static let apiSearch="https://itunes.apple.com/search?term="
     static let apiLookup="https://itunes.apple.com/lookup?id="
     static var qKeySecret:String {

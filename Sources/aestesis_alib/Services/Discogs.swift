@@ -9,8 +9,8 @@
 import Foundation
 
 public class Discogs {
-    public static var key = ""
-    public static var secret = ""
+    nonisolated(unsafe) static var key = ""
+    nonisolated(unsafe) static var secret = ""
     static let apiSearch="https://api.discogs.com/database/search?q="
     static var qKeySecret:String {
         return "&key=\(Discogs.key)&secret=\(Discogs.secret)"

@@ -114,12 +114,12 @@ extension URL {
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-public class Socket: Stream<UInt8> {
+public class Socket: Stream<UInt8>, @unchecked Sendable {
     // https://gist.github.com/kvannotten/57ddd5531c228e7e08c6
-    static var sockets = [Socket]()
-    static var queue = DispatchQueue(label: "alib.sockets", qos: .userInitiated)
-    static var ioqueue = DispatchQueue(label: "alib.sockets.io", qos: .userInitiated)
-    static var timer: DispatchSourceTimer?
+    nonisolated(unsafe) static var sockets = [Socket]()
+    nonisolated(unsafe) static var queue = DispatchQueue(label: "alib.sockets", qos: .userInitiated)
+    nonisolated(unsafe) static var ioqueue = DispatchQueue(label: "alib.sockets.io", qos: .userInitiated)
+    nonisolated(unsafe) static var timer: DispatchSourceTimer?
     
     var sread: InputStream?
     var swrite: OutputStream?

@@ -67,33 +67,29 @@ open class Atom: Hash, CustomStringConvertible, @unchecked Sendable {
     }
     public static func wait(_ duration: Double, _ fn: (() -> Void)? = nil) -> Future {
         let fut = Future()
-        var cancelled = false
         DispatchQueue.main.asyncAfter(
             deadline: .now() + duration,
             execute: {
-                if !cancelled {
+                if fut.state == .inProgress {
                     fut.done()
                 }
             })
-        fut.onCancel { _ in
-            cancelled = true
-        }
         fut.then { f in
             fn?()
         }
         return fut
     }
-    public func main(fn: @escaping () -> Void) {
+    public func main(fn: @escaping @Sendable () -> Void) {
         DispatchQueue.main.async {
             fn()
         }
     }
-    public static func main(fn: @escaping () -> Void) {
+    public static func main(fn: @escaping @Sendable () -> Void) {
         DispatchQueue.main.async {
             fn()
         }
     }
-    public func pulse(_ period: Double, _ tick: @escaping () -> Void) -> Future {
+    public func pulse(_ period: Double, _ tick: @escaping @Sendable () -> Void) -> Future {
         let fut = Future()
         DispatchQueue.main.async {
             let t = Timer(period: period, tick: tick)
@@ -564,7 +560,7 @@ public class Event<T>: @unchecked Sendable {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-public class Lock {
+public class Lock: @unchecked Sendable {
     let queue: DispatchQueue = DispatchQueue(label: "Alib.Lock")
     public func sync(_ execute: () -> Void) {
         queue.sync { [weak self] in
@@ -582,7 +578,7 @@ public class Lock {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-public class Timer: NSObject {
+public class Timer: NSObject, @unchecked Sendable {
     var timer: Foundation.Timer?
     let tick: () -> Void
     public init(period: Double, tick: @escaping () -> Void) {

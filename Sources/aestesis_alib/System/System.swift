@@ -59,7 +59,7 @@ func hostCPULoadInfo() -> host_cpu_load_info? {
   return data
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-var loadPrevious: @uncheckedSendable host_cpu_load_info?
+nonisolated(unsafe) var loadPrevious: host_cpu_load_info?
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 public func cpuUsage() -> (system: Double, user: Double, idle: Double, nice: Double) {
   let load = hostCPULoadInfo()

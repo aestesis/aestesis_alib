@@ -17,57 +17,64 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-import Foundation
 import CoreGraphics
-
+import Foundation
 
 #if os(iOS) || os(tvOS)
     import UIKit
-    public class Font : NodeUI {
-        static var registred=[String:Bool]()
-        static let nsOptions:NSStringDrawingOptions = [.usesFontLeading,.usesDeviceMetrics,.usesLineFragmentOrigin,.truncatesLastVisibleLine]
-        var uifont:UIFont
-        public var name:String {
+    public class Font: NodeUI, @unchecked Sendable {
+        nonisolated(unsafe) static var registred = [String: Bool]()
+        static let nsOptions: NSStringDrawingOptions = [
+            .usesFontLeading, .usesDeviceMetrics, .usesLineFragmentOrigin,
+            .truncatesLastVisibleLine,
+        ]
+        var uifont: UIFont
+        public var name: String {
             return uifont.fontName
         }
-        public var familly:String {
+        public var familly: String {
             return uifont.familyName
         }
-        public var size:Double {
+        public var size: Double {
             return Double(uifont.pointSize)
         }
-        public var ascender:Double {
+        public var ascender: Double {
             return Double(abs(uifont.ascender))
         }
-        public var descender:Double {
+        public var descender: Double {
             return Double(abs(uifont.descender))
         }
-        public var leading:Double {
+        public var leading: Double {
             return Double(abs(uifont.leading))
         }
-        public var height:Double {
+        public var height: Double {
             let attr = [
                 NSAttributedString.Key.font: self.uifont
             ]
-            return Size(NSAttributedString(string:"a",attributes:attr).size()).height
+            return Size(NSAttributedString(string: "a", attributes: attr).size()).height
         }
-        public func mask(text:String,align:Align=Align.left,width:Double=0,lines:Int=0) -> Bitmap {
+        public func mask(text: String, align: Align = Align.left, width: Double = 0, lines: Int = 0)
+            -> Bitmap
+        {
             let scale = viewport!.scale.height
-            let uifont = self.uifont.withSize(self.uifont.pointSize*CGFloat(scale))
+            let uifont = self.uifont.withSize(self.uifont.pointSize * CGFloat(scale))
             let attr = [
                 NSAttributedString.Key.font: uifont,
-                NSAttributedString.Key.paragraphStyle: Font.paragraphStyle(align:align),
+                NSAttributedString.Key.paragraphStyle: Font.paragraphStyle(align: align),
                 NSAttributedString.Key.foregroundColor: Color.white.system,
                 NSAttributedString.Key.backgroundColor: Color.black.system,
-                NSAttributedString.Key.baselineOffset: NSNumber(value:0)
+                NSAttributedString.Key.baselineOffset: NSNumber(value: 0),
             ]
-            let hf = Size(NSAttributedString(string:"a",attributes:attr).size()).height
-            let s=NSAttributedString(string:text,attributes:attr)
+            let hf = Size(NSAttributedString(string: "a", attributes: attr).size()).height
+            let s = NSAttributedString(string: text, attributes: attr)
             var r = Rect.zero
-            let cspace=CGColorSpaceCreateDeviceGray()
-            if width>0 {
+            let cspace = CGColorSpaceCreateDeviceGray()
+            if width > 0 {
                 let h = (lines == 0) ? Double(CGFloat.greatestFiniteMagnitude) : hf * Double(lines)
-                r = Rect(s.boundingRect(with:CGSize(width:CGFloat(ceil(width)),height:CGFloat(h)),options:Font.nsOptions,context:nil))
+                r = Rect(
+                    s.boundingRect(
+                        with: CGSize(width: CGFloat(ceil(width)), height: CGFloat(h)),
+                        options: Font.nsOptions, context: nil))
                 let nlines = ceil(r.bottom / hf)
                 r.width = ceil(width)
                 let ht = nlines * hf
@@ -75,39 +82,48 @@ import CoreGraphics
                 r.x = 0
                 r.y = 0
             } else {
-                r = Rect(o:.zero,s:Size(s.size())).ceil
+                r = Rect(o: .zero, s: Size(s.size())).ceil
             }
-            if let ctx=CGContext(data: nil, width: Int(r.right), height: Int(r.bottom), bitsPerComponent: 8, bytesPerRow: 0, space: cspace, bitmapInfo: 0) {
-                ctx.concatenate(CGAffineTransform(ta: 1, b: 0, c: 0, d: -1, tx: 0, ty: CGFloat(r.bottom)))
+            if let ctx = CGContext(
+                data: nil, width: Int(r.right), height: Int(r.bottom), bitsPerComponent: 8,
+                bytesPerRow: 0, space: cspace, bitmapInfo: 0)
+            {
+                ctx.concatenate(
+                    CGAffineTransform(ta: 1, b: 0, c: 0, d: -1, tx: 0, ty: CGFloat(r.bottom)))
                 UIGraphicsPushContext(ctx)
-                s.draw(with:r.system,options:Font.nsOptions,context:nil)
+                s.draw(with: r.system, options: Font.nsOptions, context: nil)
                 UIGraphicsPopContext()
-                if let cgi=ctx.makeImage() {
-                    return Bitmap(parent:self.viewport!,cg:cgi,scale:Size(scale,scale))
+                if let cgi = ctx.makeImage() {
+                    return Bitmap(parent: self.viewport!, cg: cgi, scale: Size(scale, scale))
                 }
             }
-            let b = Bitmap(parent:self.viewport!,size:Size(8,8))
-            let data = [UInt32](repeating:0,count:64)
-            b.set(pixels:data)
+            let b = Bitmap(parent: self.viewport!, size: Size(8, 8))
+            let data = [UInt32](repeating: 0, count: 64)
+            b.set(pixels: data)
             Debug.error("error Font.Mask  size:\(r.bottomRight)  text:\(text)")
-            b["error"] = Error("error Font.Mask  size:\(r.bottomRight)  text:\(text)",#file,#line)
+            b["error"] = Error("error Font.Mask  size:\(r.bottomRight)  text:\(text)", #file, #line)
             return b
         }
-        public func color(text:String,align:Align=Align.left,width:Double=0,lines:Int=0) -> Bitmap {
+        public func color(
+            text: String, align: Align = Align.left, width: Double = 0, lines: Int = 0
+        ) -> Bitmap {
             let attr = [
                 NSAttributedString.Key.font: self.uifont,
-                NSAttributedString.Key.paragraphStyle: Font.paragraphStyle(align:align),
+                NSAttributedString.Key.paragraphStyle: Font.paragraphStyle(align: align),
                 NSAttributedString.Key.foregroundColor: Color.white.system,
                 NSAttributedString.Key.backgroundColor: Color.black.system,
-                NSAttributedString.Key.baselineOffset: NSNumber(value:0)
+                NSAttributedString.Key.baselineOffset: NSNumber(value: 0),
             ]
-            let hf = Size(NSAttributedString(string:"a",attributes:attr).size()).height
-            let s=NSAttributedString(string:text,attributes:attr)
+            let hf = Size(NSAttributedString(string: "a", attributes: attr).size()).height
+            let s = NSAttributedString(string: text, attributes: attr)
             var r = Rect.zero
-            let cspace=CGColorSpaceCreateDeviceRGB()
-            if width>0 {
+            let cspace = CGColorSpaceCreateDeviceRGB()
+            if width > 0 {
                 let h = (lines == 0) ? Double(CGFloat.greatestFiniteMagnitude) : hf * Double(lines)
-                r = Rect(s.boundingRect(with:CGSize(width:CGFloat(ceil(width)),height:CGFloat(h)),options:Font.nsOptions,context:nil))
+                r = Rect(
+                    s.boundingRect(
+                        with: CGSize(width: CGFloat(ceil(width)), height: CGFloat(h)),
+                        options: Font.nsOptions, context: nil))
                 let nlines = ceil(r.bottom / hf)
                 r.width = ceil(width)
                 let ht = nlines * hf
@@ -115,27 +131,31 @@ import CoreGraphics
                 r.x = 0
                 r.y = 0
             } else {
-                r = Rect(o:.zero,s:Size(s.size())).ceil
+                r = Rect(o: .zero, s: Size(s.size())).ceil
                 let nlines = text.split("\n").count
                 let h = ceil(Double(nlines) * self.height)
-                r.bottom = max(h,r.bottom)
+                r.bottom = max(h, r.bottom)
             }
-            if let ctx = CGContext.init(data: nil, width: Int(r.right), height: Int(r.bottom), bitsPerComponent: 8, bytesPerRow: 0, space: cspace, bitmapInfo: 0) {
-                ctx.concatenate(CGAffineTransform(ta: 1, b: 0, c: 0, d: -1, tx: 0, ty: CGFloat(r.bottom)))
+            if let ctx = CGContext.init(
+                data: nil, width: Int(r.right), height: Int(r.bottom), bitsPerComponent: 8,
+                bytesPerRow: 0, space: cspace, bitmapInfo: 0)
+            {
+                ctx.concatenate(
+                    CGAffineTransform(ta: 1, b: 0, c: 0, d: -1, tx: 0, ty: CGFloat(r.bottom)))
                 UIGraphicsPushContext(ctx)
-                s.draw(with:r.system,options:Font.nsOptions,context:nil)
+                s.draw(with: r.system, options: Font.nsOptions, context: nil)
                 UIGraphicsPopContext()
-                if let cgi=ctx.makeImage() {
-                    return Bitmap(parent:self.viewport!,cg:cgi)
+                if let cgi = ctx.makeImage() {
+                    return Bitmap(parent: self.viewport!, cg: cgi)
                 }
             }
-            let b = Bitmap(parent:self.viewport!,size:Size(8,8))
+            let b = Bitmap(parent: self.viewport!, size: Size(8, 8))
             Debug.error("error Font.Mask  size:\(r.bottomRight)  text:\(text)")
-            b["error"] = Error("error Font.Mask  size:\(r.bottomRight)  text:\(text)",#file,#line)
+            b["error"] = Error("error Font.Mask  size:\(r.bottomRight)  text:\(text)", #file, #line)
             return b
         }
         /*
-         
+
          // TODO: from mask
         public func color(text:String,align:Align=Align.left,width:Double=0) -> Bitmap {
             let attr = [
@@ -163,36 +183,42 @@ import CoreGraphics
             return b
         }
  */
-        public func bitmap(text:String,align:Align=Align.left,width:Double=0,color:Color=Color.white,_ bitmap:@escaping (Bitmap)->())  {
-            if text.length==0  {
+        public func bitmap(
+            text: String, align: Align = Align.left, width: Double = 0, color: Color = Color.white,
+            _ bitmap: @escaping (Bitmap) -> Void
+        ) {
+            if text.length == 0 {
                 Debug.info("no text")
                 return
             }
             bg {
-                let bf=self.mask(text:text,align:align,width:width)
-                let b=Bitmap(parent:self.viewport!,size:bf.size)
-                let g=Graphics(image:b,clear:color)
-                g.draw(rect:b.bounds,image:bf,blend:.setAlpha,color:color)
-                g.onDone {_ in
+                let bf = self.mask(text: text, align: align, width: width)
+                let b = Bitmap(parent: self.viewport!, size: bf.size)
+                let g = Graphics(image: b, clear: color)
+                g.draw(rect: b.bounds, image: bf, blend: .setAlpha, color: color)
+                g.onDone { _ in
                     bitmap(b)
                 }
             }
         }
-        public func colorBitmap(text:String,align:Align=Align.left,width:Double=0,_ bitmap:@escaping (Bitmap)->())  {
-            if text.length==0  {
+        public func colorBitmap(
+            text: String, align: Align = Align.left, width: Double = 0,
+            _ bitmap: @escaping (Bitmap) -> Void
+        ) {
+            if text.length == 0 {
                 Debug.info("no text")
                 return
             }
             bg {
-                let bf=self.color(text:text,align:align,width:width)
+                let bf = self.color(text: text, align: align, width: width)
                 bitmap(bf)
             }
         }
-        public func size(_ text:String) -> Size {
+        public func size(_ text: String) -> Size {
             let attr = [
                 NSAttributedString.Key.font: uifont
             ]
-            let s=NSAttributedString(string:text,attributes:attr)
+            let s = NSAttributedString(string: text, attributes: attr)
             return Size(s.size())
         }
         /*
@@ -205,30 +231,33 @@ import CoreGraphics
             return Rect(r)
         }
  */
-        public func bounds(_ text:String, width:Double? = nil, lines:Int = 0) -> Rect {
+        public func bounds(_ text: String, width: Double? = nil, lines: Int = 0) -> Rect {
             let attr = [
                 NSAttributedString.Key.font: uifont
             ]
-            let hf = Size(NSAttributedString(string:"a",attributes:attr).size()).height
+            let hf = Size(NSAttributedString(string: "a", attributes: attr).size()).height
             let w = ceil(width ?? Double(CGFloat.greatestFiniteMagnitude))
             let h = (lines == 0) ? Double(CGFloat.greatestFiniteMagnitude) : hf * Double(lines)
-            let s=NSAttributedString(string:text,attributes:attr)
-            var r=Rect(s.boundingRect(with:CGSize(width:CGFloat(w),height:CGFloat(h)),options:Font.nsOptions,context:nil))
+            let s = NSAttributedString(string: text, attributes: attr)
+            var r = Rect(
+                s.boundingRect(
+                    with: CGSize(width: CGFloat(w), height: CGFloat(h)), options: Font.nsOptions,
+                    context: nil))
             let nlines = ceil(r.bottom / hf)
-            r.width = (width == 0) ? ceil(r.width) + ceil(r.x) * 2 :ceil(width!)
+            r.width = (width == 0) ? ceil(r.width) + ceil(r.x) * 2 : ceil(width!)
             r.height = ceil(nlines * hf)
             r.x = 0
             r.y = 0
             return r
         }
-        public func wordWrap(text:String,width:Double) -> [String] {
+        public func wordWrap(text: String, width: Double) -> [String] {
             let paraf = text.split("\n")
             var lines = [String]()
             var l = ""
             for p in paraf {
                 let words = p.split(" ")
                 for w in words {
-                    let n = (l.length>0) ? (l+" "+w) : (w)
+                    let n = (l.length > 0) ? (l + " " + w) : (w)
                     if size(l).width > width {
                         lines.append(l)
                         l = w
@@ -236,15 +265,15 @@ import CoreGraphics
                         l = n
                     }
                 }
-                if l.length>0 {
+                if l.length > 0 {
                     lines.append(l)
                     l = ""
                 }
             }
             return lines
         }
-        private static func paragraphStyle(align:Align) -> NSMutableParagraphStyle {
-            let attr=NSMutableParagraphStyle()
+        private static func paragraphStyle(align: Align) -> NSMutableParagraphStyle {
+            let attr = NSMutableParagraphStyle()
             switch Align(rawValue: align.rawValue & Align.maskHorizontal.rawValue)! {
             case Align.middle:
                 attr.alignment = .center
@@ -258,54 +287,54 @@ import CoreGraphics
             }
             return attr
         }
-        public init(parent:NodeUI,name:String,size:Double) {
+        public init(parent: NodeUI, name: String, size: Double) {
             uifont = UIFont(name: "Helvetica", size: CGFloat(Float(size)))!
             if name.contains(".otf") || name.contains(".ttf") {
-                var fname=name
-                if let i=fname.lastIndexOf("/") {
-                    fname=fname[(i+1)..<fname.length]
+                var fname = name
+                if let i = fname.lastIndexOf("/") {
+                    fname = fname[(i + 1)..<fname.length]
                 }
-                if let i=fname.lastIndexOf(".") {
-                    fname=fname[0..<i]
+                if let i = fname.lastIndexOf(".") {
+                    fname = fname[0..<i]
                 }
                 fname = fname.lowercased()
-                if Font.registred[name]==nil {
-                    let url=NSURL(fileURLWithPath: Application.resourcePath(name))
-                    if CTFontManagerRegisterFontsForURL(url,CTFontManagerScope.none,nil) {
-                        Font.registred[name]=true
+                if Font.registred[name] == nil {
+                    let url = NSURL(fileURLWithPath: Application.resourcePath(name))
+                    if CTFontManagerRegisterFontsForURL(url, CTFontManagerScope.none, nil) {
+                        Font.registred[name] = true
                     } else {
                         Debug.error("error, can't register font \(url.absoluteString!)")
                     }
                 }
-                let z=uifont
+                let z = uifont
                 for fn in Font.availableFonts {
                     //Debug.info(fn)
                     if fn.lowercased().contains(fname) {
-                        uifont=UIFont(name: fn, size: CGFloat(Float(size)))!
+                        uifont = UIFont(name: fn, size: CGFloat(Float(size)))!
                     }
                 }
-                if z==uifont {
+                if z == uifont {
                     Debug.error("font \(name) not found!")
                 }
             } else {
-                uifont=UIFont(name: name, size: CGFloat(Float(size)))!
+                uifont = UIFont(name: name, size: CGFloat(Float(size)))!
             }
-            super.init(parent:parent)
+            super.init(parent: parent)
         }
-        public init(font:Font,size:Double) {
-            uifont=UIFont(name: font.name, size: CGFloat(Float(size)))!
-            super.init(parent:font)
+        public init(font: Font, size: Double) {
+            uifont = UIFont(name: font.name, size: CGFloat(Float(size)))!
+            super.init(parent: font)
         }
-        public convenience init(parent:NodeUI,name:String,size:Int) {
-            self.init(parent:parent,name:name,size:Double(size))
+        public convenience init(parent: NodeUI, name: String, size: Int) {
+            self.init(parent: parent, name: name, size: Double(size))
         }
-        public convenience init(font:Font,size:Int) {
-            self.init(font:font,size:Double(size))
+        public convenience init(font: Font, size: Int) {
+            self.init(font: font, size: Double(size))
         }
-        public static var availableFonts:[String] {
-            var fonts=[String]()
+        public static var availableFonts: [String] {
+            var fonts = [String]()
             for fam in UIFont.familyNames {
-                for fn in UIFont.fontNames(forFamilyName:fam) {
+                for fn in UIFont.fontNames(forFamilyName: fam) {
                     fonts.append(fn)
                 }
             }
@@ -314,50 +343,58 @@ import CoreGraphics
     }
 #elseif os(OSX)
     import AppKit
-    public class Font : NodeUI {
-        static var registred=[String:Bool]()
-        static let nsOptions:NSString.DrawingOptions = [.usesFontLeading,.usesDeviceMetrics,.usesLineFragmentOrigin,.truncatesLastVisibleLine]
-        var nsfont:NSFont
-        public var name:String {
+    public class Font: NodeUI, @unchecked Sendable {
+        nonisolated(unsafe) static var registred = [String: Bool]()
+        static let nsOptions: NSString.DrawingOptions = [
+            .usesFontLeading, .usesDeviceMetrics, .usesLineFragmentOrigin,
+            .truncatesLastVisibleLine,
+        ]
+        var nsfont: NSFont
+        public var name: String {
             return nsfont.fontName
         }
-        public var familly:String {
+        public var familly: String {
             return nsfont.familyName!
         }
-        public var size:Double {
+        public var size: Double {
             return Double(nsfont.pointSize)
         }
-        public var ascender:Double {
+        public var ascender: Double {
             return Double(abs(nsfont.ascender))
         }
-        public var descender:Double {
+        public var descender: Double {
             return Double(abs(nsfont.descender))
         }
-        public var leading:Double {
+        public var leading: Double {
             return Double(abs(nsfont.leading))
         }
-        public var height:Double {
+        public var height: Double {
             let attr = [
                 NSAttributedString.Key.font: self.nsfont
             ]
-            return Size(NSAttributedString(string:"a",attributes:attr).size()).height
+            return Size(NSAttributedString(string: "a", attributes: attr).size()).height
         }
-        public func mask(text:String,align:Align=Align.left,width:Double=0,lines:Int=0) -> Bitmap {
+        public func mask(text: String, align: Align = Align.left, width: Double = 0, lines: Int = 0)
+            -> Bitmap
+        {
             let attr = [
                 NSAttributedString.Key.font: self.nsfont,
                 NSAttributedString.Key.paragraphStyle: Font.paragraphStyle(align),
                 NSAttributedString.Key.foregroundColor: Color.white.system,
                 NSAttributedString.Key.backgroundColor: Color.black.system,
-                NSAttributedString.Key.baselineOffset: NSNumber(value:0)
+                NSAttributedString.Key.baselineOffset: NSNumber(value: 0),
             ]
-            let hf = Size(NSAttributedString(string:"a",attributes:attr).size()).height
-            let s=NSAttributedString(string:text,attributes:attr)
+            let hf = Size(NSAttributedString(string: "a", attributes: attr).size()).height
+            let s = NSAttributedString(string: text, attributes: attr)
             var r = Rect.zero
             let decal = 0.0
-            let cspace=CGColorSpaceCreateDeviceGray()
-            if width>0 {
+            let cspace = CGColorSpaceCreateDeviceGray()
+            if width > 0 {
                 let h = (lines == 0) ? Double(CGFloat.greatestFiniteMagnitude) : hf * Double(lines)
-                r = Rect(s.boundingRect(with:CGSize(width:CGFloat(ceil(width)),height:CGFloat(h)),options:Font.nsOptions,context:nil))
+                r = Rect(
+                    s.boundingRect(
+                        with: CGSize(width: CGFloat(ceil(width)), height: CGFloat(h)),
+                        options: Font.nsOptions, context: nil))
                 let nlines = ceil(r.bottom / hf)
                 r.width = ceil(width)
                 let ht = nlines * hf
@@ -365,104 +402,116 @@ import CoreGraphics
                 r.height = ht
                 r.x = 0
                 r.y = 0
-                if let ctx=CGContext(data: nil, width: Int(r.right), height: Int(r.bottom), bitsPerComponent: 8, bytesPerRow: 0, space: cspace, bitmapInfo: 0) {
+                if let ctx = CGContext(
+                    data: nil, width: Int(r.right), height: Int(r.bottom), bitsPerComponent: 8,
+                    bytesPerRow: 0, space: cspace, bitmapInfo: 0)
+                {
                     NSGraphicsContext.saveGraphicsState()
                     ctx.translateBy(x: 0, y: CGFloat(decal))
-                    let nsg=NSGraphicsContext(cgContext:ctx,flipped:false)
+                    let nsg = NSGraphicsContext(cgContext: ctx, flipped: false)
                     NSGraphicsContext.current = nsg
                     //NSGraphicsContext.setCurrent(nsg)
-                    s.draw(with:r.system,options:Font.nsOptions)
+                    s.draw(with: r.system, options: Font.nsOptions)
                     NSGraphicsContext.restoreGraphicsState()
-                    if let cgi=ctx.makeImage() {
-                        return Bitmap(parent:self.viewport!,cg:cgi)
+                    if let cgi = ctx.makeImage() {
+                        return Bitmap(parent: self.viewport!, cg: cgi)
                     }
                 }
             } else {
-                r = Rect(o:.zero,s:Size(s.size())).ceil
+                r = Rect(o: .zero, s: Size(s.size())).ceil
                 //let nlines = text.split("\n").count
                 //let h = ceil(Double(nlines) * self.height)
                 //decal = r.bottom - h
                 //r.bottom = max(h,r.bottom)
-                if let ctx=CGContext(data: nil, width: Int(r.right), height: Int(r.bottom), bitsPerComponent: 8, bytesPerRow: 0, space: cspace, bitmapInfo: 0) {
+                if let ctx = CGContext(
+                    data: nil, width: Int(r.right), height: Int(r.bottom), bitsPerComponent: 8,
+                    bytesPerRow: 0, space: cspace, bitmapInfo: 0)
+                {
                     NSGraphicsContext.saveGraphicsState()
                     ctx.translateBy(x: 0, y: CGFloat(decal))
-                    let nsg=NSGraphicsContext(cgContext:ctx,flipped:false)
+                    let nsg = NSGraphicsContext(cgContext: ctx, flipped: false)
                     NSGraphicsContext.current = nsg
-                    s.draw(with:Rect(0,0,r.right,r.bottom).system,options:Font.nsOptions)
+                    s.draw(with: Rect(0, 0, r.right, r.bottom).system, options: Font.nsOptions)
                     NSGraphicsContext.restoreGraphicsState()
-                    if let cgi=ctx.makeImage() {
-                        return Bitmap(parent:self.viewport!,cg:cgi)
+                    if let cgi = ctx.makeImage() {
+                        return Bitmap(parent: self.viewport!, cg: cgi)
                     }
                 }
             }
-            let b = Bitmap(parent:self.viewport!,size:Size(8,8))
+            let b = Bitmap(parent: self.viewport!, size: Size(8, 8))
             Debug.error("error Font.Mask  size:\(r.bottomRight)  text:\(text)")
-            b["error"] = Error("error Font.Mask  size:\(r.bottomRight)  text:\(text)",#file,#line)
+            b["error"] = Error("error Font.Mask  size:\(r.bottomRight)  text:\(text)", #file, #line)
             return b
         }
-        public func bitmap(text:String,align:Align=Align.left,width:Double=0,color:Color=Color.white,_ bitmap:@escaping (Bitmap)->())  {
-            if text.length==0  {
+        public func bitmap(
+            text: String, align: Align = Align.left, width: Double = 0, color: Color = Color.white,
+            _ bitmap: @escaping (Bitmap) -> Void
+        ) {
+            if text.length == 0 {
                 Debug.info("no text")
                 return
             }
             bg {
-                let bf=self.mask(text:text,align:align,width:width)
-                let b=Bitmap(parent:self.viewport!,size:bf.size)
-                let g=Graphics(image:b,clear:color)
-                g.draw(rect:b.bounds,image:bf,blend:.setAlpha,color:color)
+                let bf = self.mask(text: text, align: align, width: width)
+                let b = Bitmap(parent: self.viewport!, size: bf.size)
+                let g = Graphics(image: b, clear: color)
+                g.draw(rect: b.bounds, image: bf, blend: .setAlpha, color: color)
                 g.onDone { [weak self] _ in
                     guard let self = self, self.attached else { return }
                     bitmap(b)
                 }
             }
         }
-        public func size(_ text:String) -> Size {
+        public func size(_ text: String) -> Size {
             let attr = [
                 NSAttributedString.Key.font: nsfont
             ]
-            let s=NSAttributedString(string:text,attributes:attr)
+            let s = NSAttributedString(string: text, attributes: attr)
             return Size(s.size())
         }
-        public func bounds(_ text:String, width:Double? = nil, lines:Int = 0) -> Rect {
+        public func bounds(_ text: String, width: Double? = nil, lines: Int = 0) -> Rect {
             let attr = [
                 NSAttributedString.Key.font: nsfont
             ]
-            let hf = Size(NSAttributedString(string:"a",attributes:attr).size()).height
+            let hf = Size(NSAttributedString(string: "a", attributes: attr).size()).height
             let w = ceil(width ?? Double(CGFloat.greatestFiniteMagnitude))
             let h = (lines == 0) ? Double(CGFloat.greatestFiniteMagnitude) : hf * Double(lines)
-            let s=NSAttributedString(string:text,attributes:attr)
-            var r=Rect(s.boundingRect(with:CGSize(width:CGFloat(w),height:CGFloat(h)),options:Font.nsOptions,context:nil))
+            let s = NSAttributedString(string: text, attributes: attr)
+            var r = Rect(
+                s.boundingRect(
+                    with: CGSize(width: CGFloat(w), height: CGFloat(h)), options: Font.nsOptions,
+                    context: nil))
             let nlines = ceil(r.bottom / hf)
-            r.width = (width == 0) ? ceil(r.width) + ceil(r.x) * 2 :ceil(width!)
+            r.width = (width == 0) ? ceil(r.width) + ceil(r.x) * 2 : ceil(width!)
             r.height = ceil(nlines * hf)
             r.x = 0
             r.y = 0
             return r
         }
-        public func wordWrap(text:String,width:Double) -> [String] {
+        public func wordWrap(text: String, width: Double) -> [String] {
             let paraf = text.split("\n")
             var lines = [String]()
             var l = ""
             for p in paraf {
                 let words = p.split(" ")
                 for w in words {
-                    let n = (l.length>0) ? (l+" "+w) : (w)
-                    if size(l).width>width {
+                    let n = (l.length > 0) ? (l + " " + w) : (w)
+                    if size(l).width > width {
                         lines.append(l)
                         l = w
                     } else {
                         l = n
                     }
                 }
-                if l.length>0 {
+                if l.length > 0 {
                     lines.append(l)
                     l = ""
                 }
             }
             return lines
         }
-        private static func paragraphStyle(_ align:Align) -> NSMutableParagraphStyle {
-            let attr=NSMutableParagraphStyle()
+        private static func paragraphStyle(_ align: Align) -> NSMutableParagraphStyle {
+            let attr = NSMutableParagraphStyle()
             switch Align(rawValue: align.rawValue & Align.maskHorizontal.rawValue)! {
             case Align.middle:
                 attr.alignment = .center
@@ -476,64 +525,66 @@ import CoreGraphics
             }
             return attr
         }
-        public init(parent:NodeUI,name:String,size:Double) {
-            nsfont=NSFont(name:"Helvetica", size: CGFloat(Float(size)))!
+        public init(parent: NodeUI, name: String, size: Double) {
+            nsfont = NSFont(name: "Helvetica", size: CGFloat(Float(size)))!
             if name.contains(".otf") || name.contains(".ttf") {
-                var fname=name
-                if let i=fname.lastIndexOf("/") {
-                    fname=fname[(i+1)..<fname.length]
+                var fname = name
+                if let i = fname.lastIndexOf("/") {
+                    fname = fname[(i + 1)..<fname.length]
                 }
-                if let i=fname.lastIndexOf(".") {
-                    fname=fname[0..<i]
+                if let i = fname.lastIndexOf(".") {
+                    fname = fname[0..<i]
                 }
                 fname = fname.lowercased()
-                if Font.registred[name]==nil {
-                    let url=Foundation.URL(fileURLWithPath: Application.resourcePath(name))
-                    if CTFontManagerRegisterFontsForURL(url as CFURL,CTFontManagerScope.process,nil) {
-                         Font.registred[name]=true
+                if Font.registred[name] == nil {
+                    let url = Foundation.URL(fileURLWithPath: Application.resourcePath(name))
+                    if CTFontManagerRegisterFontsForURL(
+                        url as CFURL, CTFontManagerScope.process, nil)
+                    {
+                        Font.registred[name] = true
                     } else {
-                        Font.registred[name]=false
+                        Font.registred[name] = false
                         //Debug.error("error, can't register font \(url.absoluteString)")
                     }
                 }
-                let z=nsfont
+                let z = nsfont
                 for fn in NSFontManager.shared.availableFonts {
                     if fn.lowercased().contains(fname) {
-                        nsfont=NSFont(name: fn, size: CGFloat(Float(size)))!
+                        nsfont = NSFont(name: fn, size: CGFloat(Float(size)))!
                     }
                 }
-                if z==nsfont {
+                if z == nsfont {
                     Debug.error("font \(name) not found!")
                 }
             } else {
-                nsfont=NSFont(name: name, size: CGFloat(Float(size)))!
+                nsfont = NSFont(name: name, size: CGFloat(Float(size)))!
             }
-            super.init(parent:parent)
+            super.init(parent: parent)
         }
-        public init(font:Font,size:Double) {
-            nsfont=NSFont(name: font.name, size: CGFloat(Float(size)))!
-            super.init(parent:font)
+        public init(font: Font, size: Double) {
+            nsfont = NSFont(name: font.name, size: CGFloat(Float(size)))!
+            super.init(parent: font)
         }
-        public convenience init(parent:NodeUI,name:String,size:Int) {
-            self.init(parent:parent,name:name,size:Double(size))
+        public convenience init(parent: NodeUI, name: String, size: Int) {
+            self.init(parent: parent, name: name, size: Double(size))
         }
-        public convenience init(font:Font,size:Int) {
-            self.init(font:font,size:Double(size))
+        public convenience init(font: Font, size: Int) {
+            self.init(font: font, size: Double(size))
         }
-        public static var availableFonts:[String] {
+        public static var availableFonts: [String] {
             return NSFontManager.shared.availableFonts
         }
     }
 #endif
 
-public class FontMetrics : NodeUI {
-    let font:Font
-    public init(parent:NodeUI,name:String,size:Double) {
-        self.font = Font(parent:parent,name:name,size:size)
-        super.init(parent:parent)
+public class FontMetrics: NodeUI {
+    let font: Font
+    public init(parent: NodeUI, name: String, size: Double) {
+        self.font = Font(parent: parent, name: name, size: size)
+        super.init(parent: parent)
         retrieveMetrics()
     }
-    func retrieveMetrics() {    // http://stackoverflow.com/questions/20327980/getting-glyph-names-using-core-text
+    func retrieveMetrics() {  // http://stackoverflow.com/questions/20327980/getting-glyph-names-using-core-text
         /*
         let fname=font.name as NSString
         //let f=CGFontCreateWithFontName(fname)

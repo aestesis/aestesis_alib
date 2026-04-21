@@ -11,8 +11,8 @@ import Foundation
 // https://www.flickr.com/services/api/flickr.photos.search.html
 
 public class Flickr {
-    static var key = ""
-    static var secret = ""
+    nonisolated(unsafe) static var key = ""
+    nonisolated(unsafe) static var secret = ""
     static let api="https://api.flickr.com/services/rest/"
     static let apiSearch = "https://api.flickr.com/services/rest/?method=flickr.photos.search&api_key=$key&text=$query&license=1&safe_search=1&content_type=1&per_page=5&format=json"
     public static func search(query:String,fn:@escaping ((Any?)->())) {

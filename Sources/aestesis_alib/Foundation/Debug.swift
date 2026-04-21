@@ -21,7 +21,7 @@ import Foundation
 
 
 public class Debug {
-    public static var codeRoot = "/aestesis-swift/"
+    nonisolated(unsafe) public static var codeRoot = "/aestesis-swift/"
     static func log(_ t:String) {
         NSLog("%@ %@","\(Application.name):",t)
     }
