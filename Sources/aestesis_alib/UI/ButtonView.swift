@@ -19,7 +19,7 @@
 
 import Foundation
 
-public class ButtonView : View {
+public class ButtonView : View, @unchecked Sendable {
     public enum Kind {
         case square
         case rectangle

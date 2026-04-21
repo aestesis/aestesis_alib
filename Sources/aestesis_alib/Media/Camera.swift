@@ -1,3 +1,4 @@
+import AVFoundation
 //
 //  Camera.swift
 //  Alib
@@ -6,18 +7,17 @@
 //  Copyright © 2017 aestesis. All rights reserved.
 //
 import Foundation
-import AVFoundation
 import Metal
 import MetalKit
 
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-public class Camera : NodeUI {
+public class Camera: NodeUI, @unchecked Sendable {
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     public let onNewFrame = Event<Void>()
-    public private(set) var preview:SharedBitmap?
+    public private(set) var preview: SharedBitmap?
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     let queue = DispatchQueue(label: "CameraSampleBufferQueue")
@@ -26,12 +26,12 @@ public class Camera : NodeUI {
     var output: AVCaptureOutput?
     var delgate: VideoDelegate?
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    var deviceId : String?
+    var deviceId: String?
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public init(parent:NodeUI,deviceId:String? = nil) {
+    public init(parent: NodeUI, deviceId: String? = nil) {
         self.deviceId = deviceId
-        super.init(parent:parent)
+        super.init(parent: parent)
     }
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     override public func detach() {
@@ -51,7 +51,9 @@ public class Camera : NodeUI {
     }
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     func grantedStart() {
-        let vdev = deviceId == nil ? AVCaptureDevice.default(for:AVMediaType.video) : AVCaptureDevice(uniqueID: deviceId!)
+        let vdev =
+            deviceId == nil
+            ? AVCaptureDevice.default(for: AVMediaType.video) : AVCaptureDevice(uniqueID: deviceId!)
         if let vdev = vdev {
             do {
                 let vinput = try AVCaptureDeviceInput(device: vdev)
@@ -61,16 +63,18 @@ public class Camera : NodeUI {
                 session!.addInput(vinput)
                 self.input = vinput
                 let voutput = AVCaptureVideoDataOutput()
-                voutput.videoSettings = [ String(kCVPixelBufferPixelFormatTypeKey) : kCMPixelFormat_32BGRA]
+                voutput.videoSettings = [
+                    String(kCVPixelBufferPixelFormatTypeKey): kCMPixelFormat_32BGRA
+                ]
                 voutput.alwaysDiscardsLateVideoFrames = true
                 let vdel = VideoDelegate()
                 vdel.onFrame.alive(self) { sampleBuffer in
                     if let imgbuf = CMSampleBufferGetImageBuffer(sampleBuffer) {
-                        self.preview = SharedBitmap(parent:self,pixelBuffer: imgbuf)
+                        self.preview = SharedBitmap(parent: self, pixelBuffer: imgbuf)
                         self.onNewFrame.dispatch(())
                     }
                 }
-                voutput.setSampleBufferDelegate(vdel,queue:queue)
+                voutput.setSampleBufferDelegate(vdel, queue: queue)
                 self.delgate = vdel
                 if !session!.canAddOutput(voutput) {
                     Debug.error("Camera output problems")
@@ -106,30 +110,45 @@ public class Camera : NodeUI {
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     @objc
-    func notification(not:Notification) {
+    func notification(not: Notification) {
         Debug.info(not.description)
     }
-    private func addObservers(session:AVCaptureSession) {
-        NotificationCenter.default.addObserver(self, selector: #selector(self.notification), name: NSNotification.Name.AVCaptureSessionRuntimeError, object: session)
-        NotificationCenter.default.addObserver(self, selector: #selector(self.notification), name: NSNotification.Name.AVCaptureSessionWasInterrupted, object: session)
-        NotificationCenter.default.addObserver(self, selector: #selector(self.notification), name: NSNotification.Name.AVCaptureSessionInterruptionEnded, object: session)
+    private func addObservers(session: AVCaptureSession) {
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(self.notification),
+            name: AVCaptureSession.runtimeErrorNotification, object: session)
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(self.notification),
+            name: AVCaptureSession.wasInterruptedNotification, object: session)
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(self.notification),
+            name: AVCaptureSession.interruptionEndedNotification, object: session)
     }
-    
-    private func removeObservers(session:AVCaptureSession) {
-        NotificationCenter.default.removeObserver(self, name: NSNotification.Name.AVCaptureSessionRuntimeError, object: session)
-        NotificationCenter.default.removeObserver(self, name: NSNotification.Name.AVCaptureSessionWasInterrupted, object: session)
-        NotificationCenter.default.removeObserver(self, name: NSNotification.Name.AVCaptureSessionInterruptionEnded, object: session)
+
+    private func removeObservers(session: AVCaptureSession) {
+        NotificationCenter.default.removeObserver(
+            self, name: AVCaptureSession.runtimeErrorNotification, object: session)
+        NotificationCenter.default.removeObserver(
+            self, name: AVCaptureSession.wasInterruptedNotification, object: session)
+        NotificationCenter.default.removeObserver(
+            self, name: AVCaptureSession.interruptionEndedNotification, object: session)
     }
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    class VideoDelegate : NSObject,AVCaptureVideoDataOutputSampleBufferDelegate {
+    class VideoDelegate: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
         let onFrame = Event<CMSampleBuffer>()
-        public func captureOutput(_ output: AVCaptureOutput, didDrop sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+        public func captureOutput(
+            _ output: AVCaptureOutput, didDrop sampleBuffer: CMSampleBuffer,
+            from connection: AVCaptureConnection
+        ) {
             Debug.info("Camera: frame dropped")
         }
-        public func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+        public func captureOutput(
+            _ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer,
+            from connection: AVCaptureConnection
+        ) {
             onFrame.dispatch(sampleBuffer)
-            
+
         }
     }
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

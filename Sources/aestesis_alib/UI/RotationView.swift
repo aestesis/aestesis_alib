@@ -22,37 +22,37 @@ import Foundation
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-public class RotationView : View {
+public class RotationView: View, @unchecked Sendable {
     enum Mode {
         case rotation
         case orientation
         case device
     }
-    var mode:Mode
-    var rotation:Rotation = .none
-    var realRot:Rotation = .none
-    var _orientation:Orientation = .undefined
+    var mode: Mode
+    var rotation: Rotation = .none
+    var realRot: Rotation = .none
+    var _orientation: Orientation = .undefined
     public override var orientation: Orientation {
-        if let superview=superview {
+        if let superview = superview {
             return superview.orientation.rotate(realRot)
         }
         return Orientation.undefined
     }
-    public init(superview:View,rotation:Rotation) {
+    public init(superview: View, rotation: Rotation) {
         self.mode = .rotation
         self.rotation = rotation
-        super.init(superview:superview,layout:Layout(align:.fullCenter))
+        super.init(superview: superview, layout: Layout(align: .fullCenter))
         initialize()
     }
-    public init(superview:View,orientation:Orientation) {
+    public init(superview: View, orientation: Orientation) {
         self.mode = .orientation
         self._orientation = orientation
-        super.init(superview:superview,layout:Layout(align:.fullCenter))
+        super.init(superview: superview, layout: Layout(align: .fullCenter))
         initialize()
     }
-    public init(superview:View) {
+    public init(superview: View) {
         mode = .device
-        super.init(superview:superview,layout:Layout(align:.fullCenter))
+        super.init(superview: superview, layout: Layout(align: .fullCenter))
         initialize()
     }
     func initialize() {
@@ -77,7 +77,7 @@ public class RotationView : View {
                 }
             }
         }
-        self.updateRot();
+        self.updateRot()
     }
     func updateRot() {
         var rot = Rotation.none
@@ -89,7 +89,7 @@ public class RotationView : View {
         case .device:
             rot = superview!.orientation.rotation(to: Device.orientation)
         }
-        self.transform.rotation = Vec3(z:rot.angle)
+        self.transform.rotation = Vec3(z: rot.angle)
         self.size = rot.rotate(superview!.size)
         self.realRot = rot
     }

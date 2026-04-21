@@ -24,15 +24,15 @@ import MetalPerformanceShaders
 
 // OSX, iOS, watchOS, tvOS, Linux
 #if os(OSX)
-import AppKit
+    import AppKit
 #else
-import UIKit
+    import UIKit
 #endif
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-open class SharedBitmap: Bitmap {
-    var generandom:Double
+open class SharedBitmap: Bitmap, @unchecked Sendable {
+    var generandom: Double
     func updated() {
         generandom = ß.rnd
     }
@@ -45,37 +45,41 @@ open class SharedBitmap: Bitmap {
             parent: parent, size: size, scale: scale, border: border, format: format, shared: true,
             file: file, line: line)
     }
-    override public init(parent:NodeUI,pixelBuffer:CVPixelBuffer,file:String=#file,line:Int=#line) {
+    override public init(
+        parent: NodeUI, pixelBuffer: CVPixelBuffer, file: String = #file, line: Int = #line
+    ) {
         generandom = ß.rnd
         super.init(parent: parent, pixelBuffer: pixelBuffer, file: file, line: line)
     }
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-open class Bitmap : Texture2D {
-    public var size:Size {
+open class Bitmap: Texture2D, @unchecked Sendable {
+    public var size: Size {
         return display
     }
-    public var bounds:Rect {
-        return Rect(x:0,y:0,w:size.w,h:size.h)
+    public var bounds: Rect {
+        return Rect(x: 0, y: 0, w: size.w, h: size.h)
     }
-    public func blur(_ sigma:Double,sampler smp:String="sampler.clamp",_ fn:@escaping ()->()) {
-        if self.size.width<=0 || self.size.height<=0 {
+    public func blur(
+        _ sigma: Double, sampler smp: String = "sampler.clamp", _ fn: @escaping () -> Void
+    ) {
+        if self.size.width <= 0 || self.size.height <= 0 {
             return
         }
         bg { [weak self] in
-            guard let self=self, self.attached else { return }
-            let b=Bitmap(parent:self,size:self.size)
-            let g=Graphics(image:b)
-            g.blurHorizontal(b.bounds,source:self,sigma:sigma,sampler:smp)
+            guard let self = self, self.attached else { return }
+            let b = Bitmap(parent: self, size: self.size)
+            let g = Graphics(image: b)
+            g.blurHorizontal(b.bounds, source: self, sigma: sigma, sampler: smp)
             g.onDone { [weak self] _ in
-                guard let self=self, self.attached else { return }
+                guard let self = self, self.attached else { return }
                 self.bg { [weak self] in
-                    guard let self=self, self.attached else { return }
-                    let g0=Graphics(image:self)
-                    g0.blurVertical(b.bounds,source:b,sigma:sigma,sampler:smp)
+                    guard let self = self, self.attached else { return }
+                    let g0 = Graphics(image: self)
+                    g0.blurVertical(b.bounds, source: b, sigma: sigma, sampler: smp)
                     g0.onDone { [weak self] _ in
-                        guard let self=self else { return }
+                        guard let self = self else { return }
                         self.bg { [weak self] in
                             guard let self = self, self.attached else { return }
                             fn()
@@ -86,24 +90,28 @@ open class Bitmap : Texture2D {
             }
         }
     }
-    public func blurFrom(destination rect:Rect?=nil,source:Bitmap,sigma:Double,sampler smp:String="sampler.clamp",_ f:String=#file,_ l:Int=#line,_ fn:@escaping ()->()) {
+    public func blurFrom(
+        destination rect: Rect? = nil, source: Bitmap, sigma: Double,
+        sampler smp: String = "sampler.clamp", _ f: String = #file, _ l: Int = #line,
+        _ fn: @escaping () -> Void
+    ) {
         guard attached else { return }
         let r = rect ?? self.bounds
         bg { [weak self] in
-            guard let self=self, self.attached, source.attached else { return }
-            let b=Bitmap(parent:self,size:source.size)
-            let g=Graphics(image:b)
-            g.blurHorizontal(b.bounds,source:source,sigma:sigma,sampler:smp)
+            guard let self = self, self.attached, source.attached else { return }
+            let b = Bitmap(parent: self, size: source.size)
+            let g = Graphics(image: b)
+            g.blurHorizontal(b.bounds, source: source, sigma: sigma, sampler: smp)
             g.onDone { [weak self] ok in
-                guard let self=self, self.attached, source.attached else { return }
+                guard let self = self, self.attached, source.attached else { return }
                 switch ok {
                 case .success:
                     self.bg { [weak self] in
-                        guard let self=self, self.attached else { return }
-                        let g0=Graphics(image:self)
-                        g0.blurVertical(r,source:b,sigma:sigma,sampler:smp)
+                        guard let self = self, self.attached else { return }
+                        let g0 = Graphics(image: self)
+                        g0.blurVertical(r, source: b, sigma: sigma, sampler: smp)
                         g0.onDone { [weak self] _ in
-                            guard let self=self, self.attached else { return }
+                            guard let self = self, self.attached else { return }
                             fn()
                             b.detach()
                         }
@@ -118,12 +126,13 @@ open class Bitmap : Texture2D {
             }
         }
     }
-    
-    public func gaussianBlur(sigma:Double) {
-        guard let gpu = viewport?.gpu, var dt=texture, let cb = gpu.queue.makeCommandBuffer() else {
+
+    public func gaussianBlur(sigma: Double) {
+        guard let gpu = viewport?.gpu, var dt = texture, let cb = gpu.queue.makeCommandBuffer()
+        else {
             return
         }
-        let gaussian = MPSImageGaussianBlur(device:viewport!.gpu.device!,sigma:Float(sigma))
+        let gaussian = MPSImageGaussianBlur(device: viewport!.gpu.device!, sigma: Float(sigma))
         gaussian.encode(commandBuffer: cb, inPlaceTexture: &dt)
         cb.commit()
         cb.waitUntilCompleted()
@@ -131,21 +140,25 @@ open class Bitmap : Texture2D {
             Debug.info(e.localizedDescription)
         }
     }
-    public func gaussianBlur(source:Bitmap,sigma:Double) {
-        guard let gpu = viewport?.gpu, let st=source.texture, let dt=texture, let cb = gpu.queue.makeCommandBuffer() else {
+    public func gaussianBlur(source: Bitmap, sigma: Double) {
+        guard let gpu = viewport?.gpu, let st = source.texture, let dt = texture,
+            let cb = gpu.queue.makeCommandBuffer()
+        else {
             return
         }
-        let gaussian = MPSImageGaussianBlur(device:viewport!.gpu.device!,sigma:Float(sigma))
+        let gaussian = MPSImageGaussianBlur(device: viewport!.gpu.device!, sigma: Float(sigma))
         gaussian.encode(commandBuffer: cb, sourceTexture: st, destinationTexture: dt)
         cb.commit()
         cb.waitUntilCompleted()
     }
-    
-    public func copy(source:Bitmap) {
+
+    public func copy(source: Bitmap) {
         guard size == source.size else {
             fatalError("Bitmap.copy() no size match")
         }
-        guard let gpu = viewport?.gpu, let st=source.texture, let dt=texture, let cb = gpu.queue.makeCommandBuffer() else {
+        guard let gpu = viewport?.gpu, let st = source.texture, let dt = texture,
+            let cb = gpu.queue.makeCommandBuffer()
+        else {
             return
         }
         let blitCommandEncoder = cb.makeBlitCommandEncoder()!
@@ -165,12 +178,11 @@ open class Bitmap : Texture2D {
     }
 
     public func copy() -> Bitmap {
-        let b=Bitmap(parent:parent as! NodeUI,size:size)
-        b.copy(source:self)
+        let b = Bitmap(parent: parent as! NodeUI, size: size)
+        b.copy(source: self)
         return b
     }
 
-    
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -178,14 +190,14 @@ open class Bitmap : Texture2D {
 
 /*
  custom kernel
- 
+
  final class Adjustments {
 
      var temperature: Float = .zero
      var tint: Float = .zero
      private var deviceSupportsNonuniformThreadgroups: Bool
      private let pipelineState: MTLComputePipelineState
-     
+
      init(library: MTLLibrary) throws {
          self.deviceSupportsNonuniformThreadgroups = library.device.supportsFeatureSet(.iOS_GPUFamily4_v1)
          let constantValues = MTLFunctionConstantValues()
@@ -196,7 +208,7 @@ open class Bitmap : Texture2D {
                                                  constantValues: constantValues)
          self.pipelineState = try library.device.makeComputePipelineState(function: function)
      }
-     
+
      func encode(source: MTLTexture,
                  destination: MTLTexture,
                  in commandBuffer: MTLCommandBuffer) {
@@ -225,7 +237,7 @@ open class Bitmap : Texture2D {
                                        depth: 1)
 
          encoder.setComputePipelineState(self.pipelineState)
-         
+
          if self.deviceSupportsNonuniformThreadgroups {
              encoder.dispatchThreads(gridSize,
                                      threadsPerThreadgroup: threadGroupSize)
@@ -236,10 +248,10 @@ open class Bitmap : Texture2D {
              encoder.dispatchThreadgroups(threadGroupCount,
                                           threadsPerThreadgroup: threadGroupSize)
          }
-         
+
          encoder.endEncoding()
      }
 
  }
- 
+
  */

@@ -24,506 +24,697 @@ import simd
 
 // OSX, iOS, watchOS, tvOS, Linux
 #if os(OSX)
-import AppKit
+    import AppKit
 #elseif os(iOS) || os(tvOS)
-import UIKit
+    import UIKit
 #endif
 
 // http://code.tutsplus.com/tutorials/ios-8-getting-started-with-metal--cms-21987
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-open class Graphics : NodeUI {
+open class Graphics: NodeUI, @unchecked Sendable {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public private(set) var matrix:Mat4
-    var scale:Size
-    var output:Size
-    var clip:Rect
-    var clipping=false
-    public private(set) var render:RenderPass
+    public private(set) var matrix: Mat4
+    var scale: Size
+    var output: Size
+    var clip: Rect
+    var clipping = false
+    public private(set) var render: RenderPass
     private var renderOwner = false
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func onDone(_ fn: @escaping (RenderPass.Result)->()) {
+    public func onDone(_ fn: @escaping (RenderPass.Result) -> Void) {
         render.onDone.once { result in
             fn(result)
         }
     }
-    public var root : Graphics {
-        var g : Graphics = self
+    public var root: Graphics {
+        var g: Graphics = self
         while let gn = g.parent as? Graphics {
             g = gn
         }
         return g
     }
-    public var extendedBlendSupported : Bool {
+    public var extendedBlendSupported: Bool {
         return self["program.color.multiply"] != nil
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func fill(rect:Rect,blend:BlendMode=BlendMode.opaque,color:Color) {
-        program("program.color",blend:blend)
+    public func fill(rect: Rect, blend: BlendMode = BlendMode.opaque, color: Color) {
+        program("program.color", blend: blend)
         uniforms(matrix)
-        let vert=colorVertices(4)
-        let strip=rect.strip
+        let vert = colorVertices(4)
+        let strip = rect.strip
         for i in 0...3 {
-            vert[i]=ColorVertice(position:strip[i].infloat3,color:color.infloat4)
+            vert[i] = ColorVertice(position: strip[i].infloat3, color: color.infloat4)
         }
-        render.draw(trianglestrip:4)
+        render.draw(trianglestrip: 4)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func draw(rect:Rect,image:Bitmap,from:Rect?=nil,lut:Texture3D? = nil, blend:BlendMode=BlendMode.opaque,color:Color=Color.white,rotation:Rotation=Rotation.none) {
+    public func draw(
+        rect: Rect, image: Bitmap, from: Rect? = nil, lut: Texture3D? = nil,
+        blend: BlendMode = BlendMode.opaque, color: Color = Color.white,
+        rotation: Rotation = Rotation.none
+    ) {
         var wrap = false
         if lut == nil {
-            program("program.texture",blend:blend)
+            program("program.texture", blend: blend)
         } else {
-            program("program.lut",blend:blend)
+            program("program.lut", blend: blend)
         }
         uniforms(matrix)
-        let vert=textureVertices(4)
-        let strip=rect.strip
-        var rs = Rect(x:0,y:0,w:1,h:1)
-        if let r=from {
+        let vert = textureVertices(4)
+        let strip = rect.strip
+        var rs = Rect(x: 0, y: 0, w: 1, h: 1)
+        if let r = from {
             rs = r / image.size
-            wrap = rs.left<0 || rs.top<0 || rs.right>1 || rs.bottom>1   // TODO: separate U and V wrap
+            wrap = rs.left < 0 || rs.top < 0 || rs.right > 1 || rs.bottom > 1  // TODO: separate U and V wrap
         }
-        let uv=rs.strip(rotation)
+        let uv = rs.strip(rotation)
         for i in 0...3 {
-            vert[i]=TextureVertice(position:strip[i].infloat3,uv:uv[i].infloat2,color:color.infloat4)
+            vert[i] = TextureVertice(
+                position: strip[i].infloat3, uv: uv[i].infloat2, color: color.infloat4)
         }
         sampler(wrap ? "sampler.wrap" : "sampler.clamp")
-        render.use(texture:image)
-        if let lut=lut {
-            render.use(texture:lut,atIndex:1)
+        render.use(texture: image)
+        if let lut = lut {
+            render.use(texture: lut, atIndex: 1)
         }
-        render.draw(trianglestrip:4)
+        render.draw(trianglestrip: 4)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func draw(rect:Rect,image:Bitmap,from:Rect?=nil,gradient:Bitmap,blend:BlendMode = .opaque,color:Color = .white,rotation:Rotation=Rotation.none)  {
+    public func draw(
+        rect: Rect, image: Bitmap, from: Rect? = nil, gradient: Bitmap, blend: BlendMode = .opaque,
+        color: Color = .white, rotation: Rotation = Rotation.none
+    ) {
         var wrap = false
         if image.format == .height {
-            program("program.gradient.height",blend:blend)
+            program("program.gradient.height", blend: blend)
         } else {
-            program("program.gradient",blend:blend)
+            program("program.gradient", blend: blend)
         }
         uniforms(matrix)
-        let vert=textureVertices(4)
-        let strip=rect.strip
-        var rs = Rect(x:0,y:0,w:1,h:1)
-        if let r=from {
+        let vert = textureVertices(4)
+        let strip = rect.strip
+        var rs = Rect(x: 0, y: 0, w: 1, h: 1)
+        if let r = from {
             rs = r / image.size
-            wrap = rs.left<0 || rs.top<0 || rs.right>1 || rs.bottom>1   // TODO: separate U and V wrap
+            wrap = rs.left < 0 || rs.top < 0 || rs.right > 1 || rs.bottom > 1  // TODO: separate U and V wrap
         }
-        let uv=rs.strip(rotation)
+        let uv = rs.strip(rotation)
         for i in 0...3 {
-            vert[i]=TextureVertice(position:strip[i].infloat3,uv:uv[i].infloat2,color:color.infloat4)
+            vert[i] = TextureVertice(
+                position: strip[i].infloat3, uv: uv[i].infloat2, color: color.infloat4)
         }
         sampler(wrap ? "sampler.wrap" : "sampler.clamp")
-        render.use(texture:image)
-        render.use(texture:gradient,atIndex:1)
-        render.draw(trianglestrip:4)
+        render.use(texture: image)
+        render.use(texture: gradient, atIndex: 1)
+        render.draw(trianglestrip: 4)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func draw(rect:Rect,image:Bitmap,mask:Bitmap,blend:BlendMode=BlendMode.alpha,color:Color=Color.white) {
-        program("program.texture.mask",blend:blend)
+    public func draw(
+        rect: Rect, image: Bitmap, mask: Bitmap, blend: BlendMode = BlendMode.alpha,
+        color: Color = Color.white
+    ) {
+        program("program.texture.mask", blend: blend)
         uniforms(matrix)
-        let vert=textureVertices(4)
-        let strip=rect.strip
-        let rs = Rect(x:0,y:0,w:1,h:1)
+        let vert = textureVertices(4)
+        let strip = rect.strip
+        let rs = Rect(x: 0, y: 0, w: 1, h: 1)
         let uv = rs.strip
         for i in 0...3 {
-            vert[i]=TextureVertice(position:strip[i].infloat3,uv:uv[i].infloat2,color:color.infloat4)
+            vert[i] = TextureVertice(
+                position: strip[i].infloat3, uv: uv[i].infloat2, color: color.infloat4)
         }
         sampler("sampler.clamp")
-        render.use(texture:image)
-        render.use(texture:mask,atIndex:1)
-        render.draw(trianglestrip:4)
+        render.use(texture: image)
+        render.use(texture: mask, atIndex: 1)
+        render.draw(trianglestrip: 4)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func draw(rect:Rect,image:Bitmap,mask:Bitmap,blend:BlendMode=BlendMode.alpha,color:Color=Color.white,rotation:Rotation=Rotation.none,maskRotation:Rotation=Rotation.none) {
-        program("program.texture.bitmap.mask",blend:blend)
+    public func draw(
+        rect: Rect, image: Bitmap, mask: Bitmap, blend: BlendMode = BlendMode.alpha,
+        color: Color = Color.white, rotation: Rotation = Rotation.none,
+        maskRotation: Rotation = Rotation.none
+    ) {
+        program("program.texture.bitmap.mask", blend: blend)
         uniforms(matrix)
-        let vert=textureMaskVertices(4)
-        let cl=color.infloat4
-        let strip=rect.strip
-        let rs = Rect(x:0,y:0,w:1,h:1)
+        let vert = textureMaskVertices(4)
+        let cl = color.infloat4
+        let strip = rect.strip
+        let rs = Rect(x: 0, y: 0, w: 1, h: 1)
         let uv = rs.strip(rotation)
         let uvm = rs.strip(maskRotation)
         for i in 0...3 {
-            vert[i]=TextureMaskVertice(position:strip[i].infloat3,uv:uv[i].infloat2,uvmask:uvm[i].infloat2,color:cl)
+            vert[i] = TextureMaskVertice(
+                position: strip[i].infloat3, uv: uv[i].infloat2, uvmask: uvm[i].infloat2, color: cl)
         }
         sampler("sampler.clamp")
-        render.use(texture:image)
-        render.use(texture:mask,atIndex:1)
-        render.draw(trianglestrip:4)
+        render.use(texture: image)
+        render.use(texture: mask, atIndex: 1)
+        render.draw(trianglestrip: 4)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    func blendParam(_ p:Float32)   {
-        let b=buffer(MemoryLayout<Float32>.stride)
+    func blendParam(_ p: Float32) {
+        let b = buffer(MemoryLayout<Float32>.stride)
         let ptr = b.ptr.assumingMemoryBound(to: Float32.self)
         ptr[0] = p
-        render.use(fragmentBuffer:b,atIndex:0)
+        render.use(fragmentBuffer: b, atIndex: 0)
     }
-    public func blend(rect:Rect,base:Bitmap,overlay:Bitmap,blend:BlendMode=BlendMode.opaque,opacity:Double=1.0) {
-        program("program.blend",blend:blend)
+    public func blend(
+        rect: Rect, base: Bitmap, overlay: Bitmap, blend: BlendMode = BlendMode.opaque,
+        opacity: Double = 1.0
+    ) {
+        program("program.blend", blend: blend)
         uniforms(matrix)
         blendParam(Float32(opacity))
-        let vert=blendVertices(4)
-        let strip=rect.strip
-        let rs = Rect(x:0,y:0,w:1,h:1)
-        let uv=rs.strip
+        let vert = blendVertices(4)
+        let strip = rect.strip
+        let rs = Rect(x: 0, y: 0, w: 1, h: 1)
+        let uv = rs.strip
         for i in 0...3 {
-            vert[i]=BlendVertice(position:strip[i].infloat3,uv:uv[i].infloat2)
+            vert[i] = BlendVertice(position: strip[i].infloat3, uv: uv[i].infloat2)
         }
         sampler("sampler.clamp")
-        render.use(texture:base,atIndex:0)
-        render.use(texture:overlay,atIndex:1)
-        render.draw(trianglestrip:4)
+        render.use(texture: base, atIndex: 0)
+        render.use(texture: overlay, atIndex: 1)
+        render.draw(trianglestrip: 4)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func draw(strip vs:[Vertice],image:Bitmap,sampler smp:String="sampler.clamp",blend:BlendMode=BlendMode.opaque) {
-        program("program.texture",blend:blend)
+    public func draw(
+        strip vs: [Vertice], image: Bitmap, sampler smp: String = "sampler.clamp",
+        blend: BlendMode = BlendMode.opaque
+    ) {
+        program("program.texture", blend: blend)
         uniforms(matrix)
-        let vert=textureVertices(vs.count)
+        let vert = textureVertices(vs.count)
         for i in 0..<vs.count {
-            let v=vs[i]
-            vert[i] = TextureVertice(position:v.position.infloat3, uv: v.uv.infloat2, color: v.color.infloat4)
+            let v = vs[i]
+            vert[i] = TextureVertice(
+                position: v.position.infloat3, uv: v.uv.infloat2, color: v.color.infloat4)
         }
         sampler(smp)
-        render.use(texture:image)
-        render.draw(trianglestrip:vs.count)
+        render.use(texture: image)
+        render.draw(trianglestrip: vs.count)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func draw(triangle vs:[Vertice],image:Bitmap,sampler smp:String="sampler.clamp",blend:BlendMode=BlendMode.opaque) {
-        program("program.texture",blend:blend)
+    public func draw(
+        triangle vs: [Vertice], image: Bitmap, sampler smp: String = "sampler.clamp",
+        blend: BlendMode = BlendMode.opaque
+    ) {
+        program("program.texture", blend: blend)
         uniforms(matrix)
-        let vert=textureVertices(vs.count)
+        let vert = textureVertices(vs.count)
         for i in 0..<vs.count {
-            let v=vs[i]
-            vert[i] = TextureVertice(position:v.position.infloat3,uv:v.uv.infloat2,color:v.color.infloat4)
+            let v = vs[i]
+            vert[i] = TextureVertice(
+                position: v.position.infloat3, uv: v.uv.infloat2, color: v.color.infloat4)
         }
         sampler(smp)
-        render.use(texture:image)
-        render.draw(triangle:vs.count)
+        render.use(texture: image)
+        render.draw(triangle: vs.count)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func draw(sprites:[PointSprite],image:Bitmap,scale:Double=1,blend:BlendMode=BlendMode.opaque) {
-        program("program.texture",blend:blend)
+    public func draw(
+        sprites: [PointSprite], image: Bitmap, scale: Double = 1,
+        blend: BlendMode = BlendMode.opaque
+    ) {
+        program("program.texture", blend: blend)
         uniforms(matrix)
-        let vert=textureVertices(6*sprites.count)
+        let vert = textureVertices(6 * sprites.count)
         var i = 0
-        let s=Rect(x:0,y:0,w:1,h:1)
+        let s = Rect(x: 0, y: 0, w: 1, h: 1)
         for sp in sprites {
             let cl = sp.color.infloat4
-            let d = sp.position.rect(image.size).scale(sp.scale*scale)
-            vert[i]=TextureVertice(position:d.topLeft.infloat3,uv:s.topLeft.infloat2,color:cl)
+            let d = sp.position.rect(image.size).scale(sp.scale * scale)
+            vert[i] = TextureVertice(
+                position: d.topLeft.infloat3, uv: s.topLeft.infloat2, color: cl)
             i += 1
-            vert[i]=TextureVertice(position:d.topRight.infloat3,uv:s.topRight.infloat2,color:cl)
+            vert[i] = TextureVertice(
+                position: d.topRight.infloat3, uv: s.topRight.infloat2, color: cl)
             i += 1
-            vert[i]=TextureVertice(position:d.bottomLeft.infloat3,uv:s.bottomLeft.infloat2,color:cl)
+            vert[i] = TextureVertice(
+                position: d.bottomLeft.infloat3, uv: s.bottomLeft.infloat2, color: cl)
             i += 1
-            vert[i]=TextureVertice(position:d.topRight.infloat3,uv:s.topRight.infloat2,color:cl)
+            vert[i] = TextureVertice(
+                position: d.topRight.infloat3, uv: s.topRight.infloat2, color: cl)
             i += 1
-            vert[i]=TextureVertice(position:d.bottomRight.infloat3,uv:s.bottomRight.infloat2,color:cl)
+            vert[i] = TextureVertice(
+                position: d.bottomRight.infloat3, uv: s.bottomRight.infloat2, color: cl)
             i += 1
-            vert[i]=TextureVertice(position:d.bottomLeft.infloat3,uv:s.bottomLeft.infloat2,color:cl)
+            vert[i] = TextureVertice(
+                position: d.bottomLeft.infloat3, uv: s.bottomLeft.infloat2, color: cl)
             i += 1
         }
         sampler("sampler.clamp")
-        render.use(texture:image)
-        render.draw(triangle:6*sprites.count)
+        render.use(texture: image)
+        render.draw(triangle: 6 * sprites.count)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func draw9grid(rect:Rect,image:Bitmap,blend:BlendMode=BlendMode.opaque,color:Color=Color.white) {
+    public func draw9grid(
+        rect: Rect, image: Bitmap, blend: BlendMode = BlendMode.opaque, color: Color = Color.white
+    ) {
         let r = rect
         let sd = r.size
         let m = image.bounds.center
         let source = image.size
-        if sd.w<image.size.width || sd.h<image.size.height {
-            Debug.error(Error("destination can't be smaller than 9grid source",#file,#line))
+        if sd.w < image.size.width || sd.h < image.size.height {
+            Debug.error(Error("destination can't be smaller than 9grid source", #file, #line))
             return
         }
-        let rl:[(d:Rect,s:Rect)] = [
-            (d:Rect(x:r.x,y:r.y,w:m.x,h:m.y),s:Rect(x:0,y:0,w:m.x,h:m.y)),
-            (d:Rect(x:r.x+sd.w-m.x,y:r.y,w:m.x,h:m.y),s:Rect(x:m.x,y:0,w:m.x,h:m.y)),
-            (d:Rect(x:r.x,y:r.y+sd.h-m.y,w:m.x,h:m.y),s:Rect(x:0,y:m.y,w:m.x,h:m.y)),
-            (d:Rect(x:r.x+sd.w-m.x,y:r.y+sd.h-m.y,w:m.x,h:m.y),s:Rect(x:m.x,y:m.y,w:m.x,h:m.y)),
-            (d:Rect(x:r.x,y:r.y+m.y,w:m.x,h:sd.h-source.h),s:Rect(x:0,y:m.y-0.5,w:m.x,h:1)),
-            (d:Rect(x:r.x+sd.w-m.x,y:r.y+m.y,w:m.x,h:sd.h-source.h),s:Rect(x:m.x,y:m.y-0.5,w:m.x,h:1)),
-            (d:Rect(x:r.x+m.x,y:r.y,w:sd.w-source.w,h:m.y),s:Rect(x:m.x-0.5,y:0,w:1,h:m.y)),
-            (d:Rect(x:r.x+m.x,y:r.y+sd.height-m.y,w:sd.w-source.w,h:m.y),s:Rect(x:m.x-0.5,y:m.y,w:1,h:m.y)),
-            (d:Rect(x:r.x+m.x,y:r.y+m.y,w:sd.w-source.w,h:sd.h-source.h),s:Rect(x:m.x-0.5,y:m.y-0.5,w:1,h:1))
+        let rl: [(d: Rect, s: Rect)] = [
+            (d: Rect(x: r.x, y: r.y, w: m.x, h: m.y), s: Rect(x: 0, y: 0, w: m.x, h: m.y)),
+            (
+                d: Rect(x: r.x + sd.w - m.x, y: r.y, w: m.x, h: m.y),
+                s: Rect(x: m.x, y: 0, w: m.x, h: m.y)
+            ),
+            (
+                d: Rect(x: r.x, y: r.y + sd.h - m.y, w: m.x, h: m.y),
+                s: Rect(x: 0, y: m.y, w: m.x, h: m.y)
+            ),
+            (
+                d: Rect(x: r.x + sd.w - m.x, y: r.y + sd.h - m.y, w: m.x, h: m.y),
+                s: Rect(x: m.x, y: m.y, w: m.x, h: m.y)
+            ),
+            (
+                d: Rect(x: r.x, y: r.y + m.y, w: m.x, h: sd.h - source.h),
+                s: Rect(x: 0, y: m.y - 0.5, w: m.x, h: 1)
+            ),
+            (
+                d: Rect(x: r.x + sd.w - m.x, y: r.y + m.y, w: m.x, h: sd.h - source.h),
+                s: Rect(x: m.x, y: m.y - 0.5, w: m.x, h: 1)
+            ),
+            (
+                d: Rect(x: r.x + m.x, y: r.y, w: sd.w - source.w, h: m.y),
+                s: Rect(x: m.x - 0.5, y: 0, w: 1, h: m.y)
+            ),
+            (
+                d: Rect(x: r.x + m.x, y: r.y + sd.height - m.y, w: sd.w - source.w, h: m.y),
+                s: Rect(x: m.x - 0.5, y: m.y, w: 1, h: m.y)
+            ),
+            (
+                d: Rect(x: r.x + m.x, y: r.y + m.y, w: sd.w - source.w, h: sd.h - source.h),
+                s: Rect(x: m.x - 0.5, y: m.y - 0.5, w: 1, h: 1)
+            ),
         ]
-        program("program.texture",blend:blend)
+        program("program.texture", blend: blend)
         uniforms(matrix)
-        let vert=textureVertices(6*rl.count)
-        let cl=color.infloat4
-        var i=0
+        let vert = textureVertices(6 * rl.count)
+        let cl = color.infloat4
+        var i = 0
         for r in rl {
-            let d=r.d
-            let s=r.s/source
-            vert[i]=TextureVertice(position:d.topLeft.infloat3,uv:s.topLeft.infloat2,color:cl)
+            let d = r.d
+            let s = r.s / source
+            vert[i] = TextureVertice(
+                position: d.topLeft.infloat3, uv: s.topLeft.infloat2, color: cl)
             i += 1
-            vert[i]=TextureVertice(position:d.topRight.infloat3,uv:s.topRight.infloat2,color:cl)
+            vert[i] = TextureVertice(
+                position: d.topRight.infloat3, uv: s.topRight.infloat2, color: cl)
             i += 1
-            vert[i]=TextureVertice(position:d.bottomLeft.infloat3,uv:s.bottomLeft.infloat2,color:cl)
+            vert[i] = TextureVertice(
+                position: d.bottomLeft.infloat3, uv: s.bottomLeft.infloat2, color: cl)
             i += 1
-            vert[i]=TextureVertice(position:d.topRight.infloat3,uv:s.topRight.infloat2,color:cl)
+            vert[i] = TextureVertice(
+                position: d.topRight.infloat3, uv: s.topRight.infloat2, color: cl)
             i += 1
-            vert[i]=TextureVertice(position:d.bottomRight.infloat3,uv:s.bottomRight.infloat2,color:cl)
+            vert[i] = TextureVertice(
+                position: d.bottomRight.infloat3, uv: s.bottomRight.infloat2, color: cl)
             i += 1
-            vert[i]=TextureVertice(position:d.bottomLeft.infloat3,uv:s.bottomLeft.infloat2,color:cl)
+            vert[i] = TextureVertice(
+                position: d.bottomLeft.infloat3, uv: s.bottomLeft.infloat2, color: cl)
             i += 1
         }
         sampler("sampler.clamp")
-        render.use(texture:image)
-        render.draw(triangle:6*rl.count)
+        render.use(texture: image)
+        render.draw(triangle: 6 * rl.count)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func draw9grid(rect:Rect,image:Bitmap,from:Rect?=nil,mask:Bitmap,gradient:Bitmap,blend:BlendMode = .opaque,color:Color = .white)  {
+    public func draw9grid(
+        rect: Rect, image: Bitmap, from: Rect? = nil, mask: Bitmap, gradient: Bitmap,
+        blend: BlendMode = .opaque, color: Color = .white
+    ) {
         let r = rect
         let s = from ?? image.bounds
         let m = mask.bounds.center
         let ms = mask.size
-        let rl:[(d:Rect,s:Rect,m:Rect)] = [
-            (d:Rect(x:r.x,y:r.y,w:m.x,h:m.y),s:Rect(x:s.x,y:s.y,w:m.x,h:m.y),m:Rect(x:0,y:0,w:m.x,h:m.y)),
-            (d:Rect(x:r.x+r.w-m.x,y:r.y,w:m.x,h:m.y),s:Rect(x:s.x+s.w-m.x,y:s.y,w:m.x,h:m.y),m:Rect(x:m.x,y:0,w:m.x,h:m.y)),
-            (d:Rect(x:r.x,y:r.y+r.h-m.y,w:m.x,h:m.y),s:Rect(x:s.x,y:s.y+s.h-m.y,w:m.x,h:m.y),m:Rect(x:0,y:m.y,w:m.x,h:m.y)),
-            (d:Rect(x:r.x+r.w-m.x,y:r.y+r.h-m.y,w:m.x,h:m.y),s:Rect(x:s.x+s.w-m.x,y:s.y+s.h-m.y,w:m.x,h:m.y),m:Rect(x:m.x,y:m.y,w:m.x,h:m.y)),
-            (d:Rect(x:r.x,y:r.y+m.y,w:m.x,h:r.h-ms.h),s:Rect(x:s.x,y:s.y+m.y,w:m.x,h:s.h-ms.h),m:Rect(x:0,y:m.y-0.5,w:m.x,h:1)),
-            (d:Rect(x:r.x+r.w-m.x,y:r.y+m.y,w:m.x,h:r.h-ms.h),s:Rect(x:s.x+s.w-m.x,y:s.y+m.y,w:m.x,h:s.h-ms.h),m:Rect(x:m.x,y:m.y-0.5,w:m.x,h:1)),
-            (d:Rect(x:r.x+m.x,y:r.y,w:r.w-ms.w,h:m.y),s:Rect(x:s.x+m.x,y:r.y,w:s.w-ms.w,h:m.y),m:Rect(x:m.x-0.5,y:0,w:1,h:m.y)),
-            (d:Rect(x:r.x+m.x,y:r.y+r.height-m.y,w:r.w-ms.w,h:m.y),s:Rect(x:s.x+m.x,y:s.y+s.height-m.y,w:s.w-ms.w,h:m.y),m:Rect(x:m.x-0.5,y:m.y,w:1,h:m.y)),
-            (d:Rect(x:r.x+m.x,y:r.y+m.y,w:r.w-ms.w,h:r.h-ms.h),s:Rect(x:s.x+m.x,y:s.y+m.y,w:s.w-ms.w,h:s.h-ms.h),m:Rect(x:m.x-0.5,y:m.y-0.5,w:1,h:1))
+        let rl: [(d: Rect, s: Rect, m: Rect)] = [
+            (
+                d: Rect(x: r.x, y: r.y, w: m.x, h: m.y), s: Rect(x: s.x, y: s.y, w: m.x, h: m.y),
+                m: Rect(x: 0, y: 0, w: m.x, h: m.y)
+            ),
+            (
+                d: Rect(x: r.x + r.w - m.x, y: r.y, w: m.x, h: m.y),
+                s: Rect(x: s.x + s.w - m.x, y: s.y, w: m.x, h: m.y),
+                m: Rect(x: m.x, y: 0, w: m.x, h: m.y)
+            ),
+            (
+                d: Rect(x: r.x, y: r.y + r.h - m.y, w: m.x, h: m.y),
+                s: Rect(x: s.x, y: s.y + s.h - m.y, w: m.x, h: m.y),
+                m: Rect(x: 0, y: m.y, w: m.x, h: m.y)
+            ),
+            (
+                d: Rect(x: r.x + r.w - m.x, y: r.y + r.h - m.y, w: m.x, h: m.y),
+                s: Rect(x: s.x + s.w - m.x, y: s.y + s.h - m.y, w: m.x, h: m.y),
+                m: Rect(x: m.x, y: m.y, w: m.x, h: m.y)
+            ),
+            (
+                d: Rect(x: r.x, y: r.y + m.y, w: m.x, h: r.h - ms.h),
+                s: Rect(x: s.x, y: s.y + m.y, w: m.x, h: s.h - ms.h),
+                m: Rect(x: 0, y: m.y - 0.5, w: m.x, h: 1)
+            ),
+            (
+                d: Rect(x: r.x + r.w - m.x, y: r.y + m.y, w: m.x, h: r.h - ms.h),
+                s: Rect(x: s.x + s.w - m.x, y: s.y + m.y, w: m.x, h: s.h - ms.h),
+                m: Rect(x: m.x, y: m.y - 0.5, w: m.x, h: 1)
+            ),
+            (
+                d: Rect(x: r.x + m.x, y: r.y, w: r.w - ms.w, h: m.y),
+                s: Rect(x: s.x + m.x, y: r.y, w: s.w - ms.w, h: m.y),
+                m: Rect(x: m.x - 0.5, y: 0, w: 1, h: m.y)
+            ),
+            (
+                d: Rect(x: r.x + m.x, y: r.y + r.height - m.y, w: r.w - ms.w, h: m.y),
+                s: Rect(x: s.x + m.x, y: s.y + s.height - m.y, w: s.w - ms.w, h: m.y),
+                m: Rect(x: m.x - 0.5, y: m.y, w: 1, h: m.y)
+            ),
+            (
+                d: Rect(x: r.x + m.x, y: r.y + m.y, w: r.w - ms.w, h: r.h - ms.h),
+                s: Rect(x: s.x + m.x, y: s.y + m.y, w: s.w - ms.w, h: s.h - ms.h),
+                m: Rect(x: m.x - 0.5, y: m.y - 0.5, w: 1, h: 1)
+            ),
         ]
-        program("program.gradient.mask",blend:blend)
+        program("program.gradient.mask", blend: blend)
         uniforms(matrix)
-#if os(tvOS) || os(iOS)
-        let vert=textureMaskVertices(6*rl.count*2)    // ugly patch, buffer too short on iOS, WTF ???
-#else
-        let vert=textureMaskVertices(6*rl.count)
-#endif
-        let cl=color.infloat4
-        var i=0
+        #if os(tvOS) || os(iOS)
+            let vert = textureMaskVertices(6 * rl.count * 2)  // ugly patch, buffer too short on iOS, WTF ???
+        #else
+            let vert = textureMaskVertices(6 * rl.count)
+        #endif
+        let cl = color.infloat4
+        var i = 0
         for r in rl {
-            let d=r.d
-            let m = r.m/mask.size
-            let s = r.s/image.size
-            vert[i]=TextureMaskVertice(position:d.topLeft.infloat3,uv:s.topLeft.infloat2,uvmask:m.topLeft.infloat2,color:cl)
+            let d = r.d
+            let m = r.m / mask.size
+            let s = r.s / image.size
+            vert[i] = TextureMaskVertice(
+                position: d.topLeft.infloat3, uv: s.topLeft.infloat2, uvmask: m.topLeft.infloat2,
+                color: cl)
             i += 1
-            vert[i]=TextureMaskVertice(position:d.topRight.infloat3,uv:s.topRight.infloat2,uvmask:m.topRight.infloat2,color:cl)
+            vert[i] = TextureMaskVertice(
+                position: d.topRight.infloat3, uv: s.topRight.infloat2, uvmask: m.topRight.infloat2,
+                color: cl)
             i += 1
-            vert[i]=TextureMaskVertice(position:d.bottomLeft.infloat3,uv:s.bottomLeft.infloat2,uvmask:m.bottomLeft.infloat2,color:cl)
+            vert[i] = TextureMaskVertice(
+                position: d.bottomLeft.infloat3, uv: s.bottomLeft.infloat2,
+                uvmask: m.bottomLeft.infloat2, color: cl)
             i += 1
-            vert[i]=TextureMaskVertice(position:d.topRight.infloat3,uv:s.topRight.infloat2,uvmask:m.topRight.infloat2,color:cl)
+            vert[i] = TextureMaskVertice(
+                position: d.topRight.infloat3, uv: s.topRight.infloat2, uvmask: m.topRight.infloat2,
+                color: cl)
             i += 1
-            vert[i]=TextureMaskVertice(position:d.bottomRight.infloat3,uv:s.bottomRight.infloat2,uvmask:m.bottomRight.infloat2,color:cl)
+            vert[i] = TextureMaskVertice(
+                position: d.bottomRight.infloat3, uv: s.bottomRight.infloat2,
+                uvmask: m.bottomRight.infloat2, color: cl)
             i += 1
-            vert[i]=TextureMaskVertice(position:d.bottomLeft.infloat3,uv:s.bottomLeft.infloat2,uvmask:m.bottomLeft.infloat2,color:cl)
+            vert[i] = TextureMaskVertice(
+                position: d.bottomLeft.infloat3, uv: s.bottomLeft.infloat2,
+                uvmask: m.bottomLeft.infloat2, color: cl)
             i += 1
         }
-        if s.left<0 || s.right>1 || s.top<0 || s.bottom>1 {
+        if s.left < 0 || s.right > 1 || s.top < 0 || s.bottom > 1 {
             sampler("sampler.wrap")
         } else {
             sampler("sampler.clamp")
         }
-        render.use(texture:image)
-        render.use(texture:mask,atIndex:1)
-        render.use(texture:gradient,atIndex:2)
-        render.draw(triangle:6*rl.count)
+        render.use(texture: image)
+        render.use(texture: mask, atIndex: 1)
+        render.use(texture: gradient, atIndex: 2)
+        render.draw(triangle: 6 * rl.count)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func draw9grid(rect:Rect,image:Bitmap,from:Rect?=nil,mask:Bitmap,blend:BlendMode=BlendMode.opaque,color:Color=Color.white) {
+    public func draw9grid(
+        rect: Rect, image: Bitmap, from: Rect? = nil, mask: Bitmap,
+        blend: BlendMode = BlendMode.opaque, color: Color = Color.white
+    ) {
         let r = rect
         let s = from ?? image.bounds
         let m = mask.bounds.center
         let d = s.size / r.size
         let ms = mask.size
-        let rl:[(d:Rect,s:Rect,m:Rect)] = [
-            (d:Rect(x:r.x,y:r.y,w:m.x,h:m.y),s:Rect(x:s.x,y:s.y,w:m.x*d.w,h:m.y*d.h),m:Rect(x:0,y:0,w:m.x,h:m.y)),
-            (d:Rect(x:r.x+r.w-m.x,y:r.y,w:m.x,h:m.y),s:Rect(x:s.x+s.w-m.x*d.w,y:s.y,w:m.x*d.w,h:m.y*d.h),m:Rect(x:m.x,y:0,w:m.x,h:m.y)),
-            (d:Rect(x:r.x,y:r.y+r.h-m.y,w:m.x,h:m.y),s:Rect(x:s.x,y:s.y+s.h-m.y*d.h,w:m.x*d.w,h:m.y*d.h),m:Rect(x:0,y:m.y,w:m.x,h:m.y)),
-            (d:Rect(x:r.x+r.w-m.x,y:r.y+r.h-m.y,w:m.x,h:m.y),s:Rect(x:s.x+s.w-m.x*d.w,y:s.y+s.h-m.y*d.h,w:m.x*d.w,h:m.y*d.h),m:Rect(x:m.x,y:m.y,w:m.x,h:m.y)),
-            (d:Rect(x:r.x,y:r.y+m.y,w:m.x,h:r.h-ms.h),s:Rect(x:s.x,y:s.y+m.y*d.h,w:m.x*d.w,h:s.h-ms.h*d.h),m:Rect(x:0,y:m.y-0.5,w:m.x,h:1)),
-            (d:Rect(x:r.x+r.w-m.x,y:r.y+m.y,w:m.x,h:r.h-ms.h),s:Rect(x:s.x+s.w-m.x*d.w,y:s.y+m.y*d.h,w:m.x*d.w,h:s.h-ms.h*d.h),m:Rect(x:m.x,y:m.y-0.5,w:m.x,h:1)),
-            (d:Rect(x:r.x+m.x,y:r.y,w:r.w-ms.w,h:m.y),s:Rect(x:s.x+m.x*d.w,y:s.y,w:s.w-ms.w*d.w,h:m.y*d.h),m:Rect(x:m.x-0.5,y:0,w:1,h:m.y)),
-            (d:Rect(x:r.x+m.x,y:r.y+r.height-m.y,w:r.w-ms.w,h:m.y),s:Rect(x:s.x+m.x*d.w,y:s.y+s.h-m.y*d.w,w:s.w-ms.w*d.w,h:m.y*d.h),m:Rect(x:m.x-0.5,y:m.y,w:1,h:m.y)),
-            (d:Rect(x:r.x+m.x,y:r.y+m.y,w:r.w-ms.w,h:r.h-ms.h),s:Rect(x:s.x+m.x*d.w,y:s.y+m.y*d.h,w:s.w-ms.w*d.w,h:s.h-ms.h*d.h),m:Rect(x:m.x-0.5,y:m.y-0.5,w:1,h:1))
+        let rl: [(d: Rect, s: Rect, m: Rect)] = [
+            (
+                d: Rect(x: r.x, y: r.y, w: m.x, h: m.y),
+                s: Rect(x: s.x, y: s.y, w: m.x * d.w, h: m.y * d.h),
+                m: Rect(x: 0, y: 0, w: m.x, h: m.y)
+            ),
+            (
+                d: Rect(x: r.x + r.w - m.x, y: r.y, w: m.x, h: m.y),
+                s: Rect(x: s.x + s.w - m.x * d.w, y: s.y, w: m.x * d.w, h: m.y * d.h),
+                m: Rect(x: m.x, y: 0, w: m.x, h: m.y)
+            ),
+            (
+                d: Rect(x: r.x, y: r.y + r.h - m.y, w: m.x, h: m.y),
+                s: Rect(x: s.x, y: s.y + s.h - m.y * d.h, w: m.x * d.w, h: m.y * d.h),
+                m: Rect(x: 0, y: m.y, w: m.x, h: m.y)
+            ),
+            (
+                d: Rect(x: r.x + r.w - m.x, y: r.y + r.h - m.y, w: m.x, h: m.y),
+                s: Rect(
+                    x: s.x + s.w - m.x * d.w, y: s.y + s.h - m.y * d.h, w: m.x * d.w, h: m.y * d.h),
+                m: Rect(x: m.x, y: m.y, w: m.x, h: m.y)
+            ),
+            (
+                d: Rect(x: r.x, y: r.y + m.y, w: m.x, h: r.h - ms.h),
+                s: Rect(x: s.x, y: s.y + m.y * d.h, w: m.x * d.w, h: s.h - ms.h * d.h),
+                m: Rect(x: 0, y: m.y - 0.5, w: m.x, h: 1)
+            ),
+            (
+                d: Rect(x: r.x + r.w - m.x, y: r.y + m.y, w: m.x, h: r.h - ms.h),
+                s: Rect(
+                    x: s.x + s.w - m.x * d.w, y: s.y + m.y * d.h, w: m.x * d.w, h: s.h - ms.h * d.h),
+                m: Rect(x: m.x, y: m.y - 0.5, w: m.x, h: 1)
+            ),
+            (
+                d: Rect(x: r.x + m.x, y: r.y, w: r.w - ms.w, h: m.y),
+                s: Rect(x: s.x + m.x * d.w, y: s.y, w: s.w - ms.w * d.w, h: m.y * d.h),
+                m: Rect(x: m.x - 0.5, y: 0, w: 1, h: m.y)
+            ),
+            (
+                d: Rect(x: r.x + m.x, y: r.y + r.height - m.y, w: r.w - ms.w, h: m.y),
+                s: Rect(
+                    x: s.x + m.x * d.w, y: s.y + s.h - m.y * d.w, w: s.w - ms.w * d.w, h: m.y * d.h),
+                m: Rect(x: m.x - 0.5, y: m.y, w: 1, h: m.y)
+            ),
+            (
+                d: Rect(x: r.x + m.x, y: r.y + m.y, w: r.w - ms.w, h: r.h - ms.h),
+                s: Rect(
+                    x: s.x + m.x * d.w, y: s.y + m.y * d.h, w: s.w - ms.w * d.w, h: s.h - ms.h * d.h
+                ), m: Rect(x: m.x - 0.5, y: m.y - 0.5, w: 1, h: 1)
+            ),
         ]
-        program("program.texture.bitmap.mask",blend:blend)
+        program("program.texture.bitmap.mask", blend: blend)
         uniforms(matrix)
-#if os(tvOS) || os(iOS)
-        let vert=textureMaskVertices(6*rl.count*2)    // ugly patch, buffer too short on iOS, WTF ???
-#else
-        let vert=textureMaskVertices(6*rl.count)
-#endif
-        let cl=color.infloat4
-        var i=0
+        #if os(tvOS) || os(iOS)
+            let vert = textureMaskVertices(6 * rl.count * 2)  // ugly patch, buffer too short on iOS, WTF ???
+        #else
+            let vert = textureMaskVertices(6 * rl.count)
+        #endif
+        let cl = color.infloat4
+        var i = 0
         for r in rl {
-            let d=r.d
-            let m = r.m/mask.size
-            let s = r.s/image.size
-            vert[i]=TextureMaskVertice(position:d.topLeft.infloat3,uv:s.topLeft.infloat2,uvmask:m.topLeft.infloat2,color:cl)
+            let d = r.d
+            let m = r.m / mask.size
+            let s = r.s / image.size
+            vert[i] = TextureMaskVertice(
+                position: d.topLeft.infloat3, uv: s.topLeft.infloat2, uvmask: m.topLeft.infloat2,
+                color: cl)
             i += 1
-            vert[i]=TextureMaskVertice(position:d.topRight.infloat3,uv:s.topRight.infloat2,uvmask:m.topRight.infloat2,color:cl)
+            vert[i] = TextureMaskVertice(
+                position: d.topRight.infloat3, uv: s.topRight.infloat2, uvmask: m.topRight.infloat2,
+                color: cl)
             i += 1
-            vert[i]=TextureMaskVertice(position:d.bottomLeft.infloat3,uv:s.bottomLeft.infloat2,uvmask:m.bottomLeft.infloat2,color:cl)
+            vert[i] = TextureMaskVertice(
+                position: d.bottomLeft.infloat3, uv: s.bottomLeft.infloat2,
+                uvmask: m.bottomLeft.infloat2, color: cl)
             i += 1
-            vert[i]=TextureMaskVertice(position:d.topRight.infloat3,uv:s.topRight.infloat2,uvmask:m.topRight.infloat2,color:cl)
+            vert[i] = TextureMaskVertice(
+                position: d.topRight.infloat3, uv: s.topRight.infloat2, uvmask: m.topRight.infloat2,
+                color: cl)
             i += 1
-            vert[i]=TextureMaskVertice(position:d.bottomRight.infloat3,uv:s.bottomRight.infloat2,uvmask:m.bottomRight.infloat2,color:cl)
+            vert[i] = TextureMaskVertice(
+                position: d.bottomRight.infloat3, uv: s.bottomRight.infloat2,
+                uvmask: m.bottomRight.infloat2, color: cl)
             i += 1
-            vert[i]=TextureMaskVertice(position:d.bottomLeft.infloat3,uv:s.bottomLeft.infloat2,uvmask:m.bottomLeft.infloat2,color:cl)
+            vert[i] = TextureMaskVertice(
+                position: d.bottomLeft.infloat3, uv: s.bottomLeft.infloat2,
+                uvmask: m.bottomLeft.infloat2, color: cl)
             i += 1
         }
         sampler("sampler.clamp")
-        render.use(texture:image)
-        render.use(texture:mask,atIndex:1)
-        render.draw(triangle:6*rl.count)
+        render.use(texture: image)
+        render.use(texture: mask, atIndex: 1)
+        render.draw(triangle: 6 * rl.count)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func drawString(font:Font,position:Point,align:Align=Align.topLeft,text:String,blend:BlendMode=BlendMode.color,color:Color=Color.white) {    // deprecated
-        draw(position:position,text:text,font:font,align:align,blend:blend,color:color)
+    public func drawString(
+        font: Font, position: Point, align: Align = Align.topLeft, text: String,
+        blend: BlendMode = BlendMode.color, color: Color = Color.white
+    ) {  // deprecated
+        draw(position: position, text: text, font: font, align: align, blend: blend, color: color)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func draw(position:Point,text:String,font:Font,align:Align=Align.topLeft,blend:BlendMode=BlendMode.color,color:Color=Color.white) {
+    public func draw(
+        position: Point, text: String, font: Font, align: Align = Align.topLeft,
+        blend: BlendMode = BlendMode.color, color: Color = Color.white
+    ) {
         if text.length == 0 {
             return
         }
-        let b=font.mask(text:text,align:align)
-        var rect=Rect(o:position,s:b.size)
+        let b = font.mask(text: text, align: align)
+        var rect = Rect(o: position, s: b.size)
         if align.hasFlag(Align.right) {
             rect.x -= b.size.width
         } else if align.hasFlag(Align.horizontalCenter) {
-            rect.x -= b.size.width*0.5
+            rect.x -= b.size.width * 0.5
         }
         if align.hasFlag(Align.bottom) {
             rect.y -= b.size.height
         } else if align.hasFlag(Align.verticalCenter) {
-            rect.y -= b.size.height*0.5
+            rect.y -= b.size.height * 0.5
         }
         //self.fill(rect:rect,color:.grey)    // 4debug
-        program("program.texture",blend:blend)
+        program("program.texture", blend: blend)
         uniforms(matrix)
-        let vert=textureVertices(4)
-        let strip=rect.strip
-        let rs = Rect(x:0,y:0,w:1,h:1)
-        let uv=rs.strip
+        let vert = textureVertices(4)
+        let strip = rect.strip
+        let rs = Rect(x: 0, y: 0, w: 1, h: 1)
+        let uv = rs.strip
         for i in 0...3 {
-            vert[i]=TextureVertice(position:strip[i].infloat3,uv:uv[i].infloat2,color:color.infloat4)
+            vert[i] = TextureVertice(
+                position: strip[i].infloat3, uv: uv[i].infloat2, color: color.infloat4)
         }
         sampler("sampler.clamp")
-        render.use(texture:b)
-        render.draw(trianglestrip:4)
+        render.use(texture: b)
+        render.draw(trianglestrip: 4)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func draw(rect rs:Rect,text:String,font:Font,lines:Int=0,align:Align=Align.topLeft,blend:BlendMode=BlendMode.color,color:Color=Color.white) {
-        let b=font.mask(text:text,align:align,width:rs.width,lines:lines)
-        var rect=Rect(o:rs.origin,s:b.size)
+    public func draw(
+        rect rs: Rect, text: String, font: Font, lines: Int = 0, align: Align = Align.topLeft,
+        blend: BlendMode = BlendMode.color, color: Color = Color.white
+    ) {
+        let b = font.mask(text: text, align: align, width: rs.width, lines: lines)
+        var rect = Rect(o: rs.origin, s: b.size)
         if align.hasFlag(Align.right) {
             rect.x += rs.width - b.size.width
         } else if align.hasFlag(Align.horizontalCenter) {
-            rect.x += (rs.width-b.size.width)*0.5
+            rect.x += (rs.width - b.size.width) * 0.5
         }
         if align.hasFlag(Align.bottom) {
             rect.y += rs.height - b.size.height
         } else if align.hasFlag(Align.verticalCenter) {
-            rect.y += (rs.height - b.size.height)*0.5
+            rect.y += (rs.height - b.size.height) * 0.5
         }
-        program("program.texture",blend:blend)
+        program("program.texture", blend: blend)
         uniforms(matrix)
-        let vert=textureVertices(4)
-        let strip=rect.strip
-        let rs = Rect(x:0,y:0,w:1,h:1)
-        let uv=rs.strip
+        let vert = textureVertices(4)
+        let strip = rect.strip
+        let rs = Rect(x: 0, y: 0, w: 1, h: 1)
+        let uv = rs.strip
         for i in 0...3 {
-            vert[i]=TextureVertice(position:strip[i].infloat3,uv:uv[i].infloat2,color:color.infloat4)
+            vert[i] = TextureVertice(
+                position: strip[i].infloat3, uv: uv[i].infloat2, color: color.infloat4)
         }
         sampler("sampler.clamp")
-        render.use(texture:b)
-        render.draw(trianglestrip:4)
+        render.use(texture: b)
+        render.draw(trianglestrip: 4)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct GenerateLutHsvDecal {
-        var size:Float
-        var decal:SIMD3<Float>
+        var size: Float
+        var decal: SIMD3<Float>
     }
-    func generateLutHsvDecalParams(size:Int,decal:Vec3) {
+    func generateLutHsvDecalParams(size: Int, decal: Vec3) {
         let p = GenerateLutHsvDecal(size: Float(size), decal: decal.infloat3)
-        let b=buffer(MemoryLayout<GenerateLutHsvDecal>.stride)
-        let ptr=b.ptr.assumingMemoryBound(to: GenerateLutHsvDecal.self)
-        ptr[0]=p
-        render.use(fragmentBuffer:b,atIndex:0)
+        let b = buffer(MemoryLayout<GenerateLutHsvDecal>.stride)
+        let ptr = b.ptr.assumingMemoryBound(to: GenerateLutHsvDecal.self)
+        ptr[0] = p
+        render.use(fragmentBuffer: b, atIndex: 0)
     }
-    public func generateLut(_ rect:Rect,lutSize:Int,hsvDecal:Vec3) {
-        program("program.generate.lut",blend:BlendMode.copy)
+    public func generateLut(_ rect: Rect, lutSize: Int, hsvDecal: Vec3) {
+        program("program.generate.lut", blend: BlendMode.copy)
         uniforms(matrix)
-        generateLutHsvDecalParams(size:lutSize,decal:hsvDecal)
-        let vert=textureVertices(4)
-        let strip=rect.strip
-        let rs = Rect(x:0,y:0,w:1,h:1)
-        let uv=rs.strip
+        generateLutHsvDecalParams(size: lutSize, decal: hsvDecal)
+        let vert = textureVertices(4)
+        let strip = rect.strip
+        let rs = Rect(x: 0, y: 0, w: 1, h: 1)
+        let uv = rs.strip
         for i in 0...3 {
-            vert[i]=TextureVertice(position:strip[i].infloat3,uv:uv[i].infloat2,color:Color.white.infloat4)
+            vert[i] = TextureVertice(
+                position: strip[i].infloat3, uv: uv[i].infloat2, color: Color.white.infloat4)
         }
-        render.draw(trianglestrip:4)
+        render.draw(trianglestrip: 4)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    func blurParam(_ p:SIMD2<Float>)   {
-        let b=buffer(MemoryLayout<SIMD2<Float>>.stride)
-        let ptr=b.ptr.assumingMemoryBound(to: SIMD2<Float>.self)
-        ptr[0]=p
-        render.use(fragmentBuffer:b,atIndex:0)
+    func blurParam(_ p: SIMD2<Float>) {
+        let b = buffer(MemoryLayout<SIMD2<Float>>.stride)
+        let ptr = b.ptr.assumingMemoryBound(to: SIMD2<Float>.self)
+        ptr[0] = p
+        render.use(fragmentBuffer: b, atIndex: 0)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func blurHorizontal(_ rect:Rect,source:Bitmap,sigma:Double,sampler smp:String="sampler.clamp") {
-        program("program.blur.horizontal",blend:BlendMode.copy)
+    public func blurHorizontal(
+        _ rect: Rect, source: Bitmap, sigma: Double, sampler smp: String = "sampler.clamp"
+    ) {
+        program("program.blur.horizontal", blend: BlendMode.copy)
         uniforms(matrix)
-        blurParam(SIMD2<Float>(Float(sigma/source.size.width),Float(sigma/source.size.height)))
-        let vert=blurVertices(4)
-        let strip=rect.strip
-        let rs = Rect(x:0,y:0,w:1,h:1)
-        let uv=rs.strip
+        blurParam(SIMD2<Float>(Float(sigma / source.size.width), Float(sigma / source.size.height)))
+        let vert = blurVertices(4)
+        let strip = rect.strip
+        let rs = Rect(x: 0, y: 0, w: 1, h: 1)
+        let uv = rs.strip
         for i in 0...3 {
-            vert[i]=BlurVertice(position:strip[i].infloat3,uv:uv[i].infloat2)
-        }
-        sampler(smp)
-        render.use(texture:source)
-        render.draw(trianglestrip:4)
-    }
-    public func blurVertical(_ rect:Rect,source:Bitmap,sigma:Double,sampler smp:String="sampler.clamp") {
-        program("program.blur.vertical",blend:BlendMode.copy)
-        uniforms(matrix)
-        blurParam(SIMD2<Float>(Float(sigma/source.size.width),Float(sigma/source.size.height)))
-        let vert=blurVertices(4)
-        let strip=rect.strip
-        let rs = Rect(x:0,y:0,w:1,h:1)
-        let uv=rs.strip
-        for i in 0...3 {
-            vert[i]=BlurVertice(position:strip[i].infloat3,uv:uv[i].infloat2)
+            vert[i] = BlurVertice(position: strip[i].infloat3, uv: uv[i].infloat2)
         }
         sampler(smp)
-        render.use(texture:source)
-        render.draw(trianglestrip:4)
+        render.use(texture: source)
+        render.draw(trianglestrip: 4)
+    }
+    public func blurVertical(
+        _ rect: Rect, source: Bitmap, sigma: Double, sampler smp: String = "sampler.clamp"
+    ) {
+        program("program.blur.vertical", blend: BlendMode.copy)
+        uniforms(matrix)
+        blurParam(SIMD2<Float>(Float(sigma / source.size.width), Float(sigma / source.size.height)))
+        let vert = blurVertices(4)
+        let strip = rect.strip
+        let rs = Rect(x: 0, y: 0, w: 1, h: 1)
+        let uv = rs.strip
+        for i in 0...3 {
+            vert[i] = BlurVertice(position: strip[i].infloat3, uv: uv[i].infloat2)
+        }
+        sampler(smp)
+        render.use(texture: source)
+        render.draw(trianglestrip: 4)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func draw(_ path:Path,_ paint:Paint) {
-        if let r=paint.renderer as? Paint.RenderTexture, let t=r.texture(parent:self) {
-            program("program.texture",blend:paint.computedBlend)
+    public func draw(_ path: Path, _ paint: Paint) {
+        if let r = paint.renderer as? Paint.RenderTexture, let t = r.texture(parent: self) {
+            program("program.texture", blend: paint.computedBlend)
             self.sampler(paint.renderer!.sampler)
-            render.use(texture:t)
+            render.use(texture: t)
         } else {
-            program("program.color",blend:paint.computedBlend)
+            program("program.color", blend: paint.computedBlend)
         }
         uniforms(matrix)
-        let tess=paint.viewport!.gpu.tess
-        let contours=path.parse(paint)
+        let tess = paint.viewport!.gpu.tess
+        let contours = path.parse(paint)
         tess.beginPolygon()
         for c in contours {
             tess.beginContour()
@@ -533,31 +724,34 @@ open class Graphics : NodeUI {
         tess.endPolygon()
         for s in tess.shapes {
             if paint.renderer is Paint.RenderTexture {
-                let vert=textureVertices(s.vertices.count)
+                let vert = textureVertices(s.vertices.count)
                 for i in 0..<s.vertices.count {
-                    let v=s.vertices[i]
-                    vert[i]=TextureVertice(position:v.position.infloat3,uv:v.uv.infloat2,color:paint.color.infloat4)
+                    let v = s.vertices[i]
+                    vert[i] = TextureVertice(
+                        position: v.position.infloat3, uv: v.uv.infloat2,
+                        color: paint.color.infloat4)
                 }
             } else {
-                let vert=colorVertices(s.vertices.count)
+                let vert = colorVertices(s.vertices.count)
                 for i in 0..<s.vertices.count {
-                    vert[i]=ColorVertice(position:s.vertices[i].position.infloat3,color:paint.color.infloat4)
+                    vert[i] = ColorVertice(
+                        position: s.vertices[i].position.infloat3, color: paint.color.infloat4)
                 }
             }
             switch s.kind {
             case .triangles:
-                render.draw(triangle:s.vertices.count)
+                render.draw(triangle: s.vertices.count)
                 break
             case .triangle_STRIP:
-                render.draw(trianglestrip:s.vertices.count)
+                render.draw(trianglestrip: s.vertices.count)
                 break
             case .triangle_FAN:
-                let nidx=(s.vertices.count-2)*3
-                let b=buffer(MemoryLayout<UInt32>.stride*nidx)
-                let index=b.ptr.assumingMemoryBound(to: UInt32.self)
-                let first:UInt32=0
-                var last:UInt32=1
-                var d:Int=0
+                let nidx = (s.vertices.count - 2) * 3
+                let b = buffer(MemoryLayout<UInt32>.stride * nidx)
+                let index = b.ptr.assumingMemoryBound(to: UInt32.self)
+                let first: UInt32 = 0
+                var last: UInt32 = 1
+                var d: Int = 0
                 for i in 2..<s.vertices.count {
                     index[d] = first
                     d += 1
@@ -567,336 +761,376 @@ open class Graphics : NodeUI {
                     d += 1
                     last = UInt32(i)
                 }
-                render.draw(triangle:nidx,index:b)
+                render.draw(triangle: nidx, index: b)
                 break
             }
         }
     }
-    public func draw(_ path:Path,_ color:Color) {
-        self.draw(path,Paint(parent:self,color:color))
+    public func draw(_ path: Path, _ color: Color) {
+        self.draw(path, Paint(parent: self, color: color))
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func line(_ p0:Point,_ p1:Point,_ paint:Paint) {
-        let p=Path()
+    public func line(_ p0: Point, _ p1: Point, _ paint: Paint) {
+        let p = Path()
         p.append(Path.Segment.moveTo(p0))
         p.append(Path.Segment.lineTo(p1))
         p.append(Path.Segment.close())
-        draw(p,paint)
+        draw(p, paint)
     }
-    public func line(_ p0:Point,_ p1:Point,_ color:Color) {
-        self.line(p0,p1,Paint(parent:self,color:color))
+    public func line(_ p0: Point, _ p1: Point, _ color: Color) {
+        self.line(p0, p1, Paint(parent: self, color: color))
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func polygon(_ points:[Point],_ paint:Paint) {
-        let p=Path()
+    public func polygon(_ points: [Point], _ paint: Paint) {
+        let p = Path()
         p.append(Path.Segment.moveTo(points[0]))
         for i in 1..<points.count {
             p.append(Path.Segment.lineTo(points[i]))
         }
         p.append(Path.Segment.lineTo(points[0]))
-        draw(p,paint)
+        draw(p, paint)
     }
-    public func polygon(_ points:[Point],_ color:Color) {
-        self.polygon(points, Paint(parent:self,color:color))
+    public func polygon(_ points: [Point], _ color: Color) {
+        self.polygon(points, Paint(parent: self, color: color))
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func polygon(center:Point,count:Int,rotation:Double,radius:Double,paint:Paint) {
-        if(radius>0.1) {
-            let p=Path()
-            let da=ß.π*2/Double(count)
-            var a=rotation
-            p.append(Path.Segment.moveTo(center+Point(angle:a,radius:radius)))
+    public func polygon(center: Point, count: Int, rotation: Double, radius: Double, paint: Paint) {
+        if radius > 0.1 {
+            let p = Path()
+            let da = ß.π * 2 / Double(count)
+            var a = rotation
+            p.append(Path.Segment.moveTo(center + Point(angle: a, radius: radius)))
             for _ in 1..<count {
-                a = a+da
-                p.append(Path.Segment.lineTo(center+Point(angle:a,radius:radius)))
+                a = a + da
+                p.append(Path.Segment.lineTo(center + Point(angle: a, radius: radius)))
             }
-            draw(p,paint)
+            draw(p, paint)
         }
     }
-    public func polygon(center:Point,count:Int,rotation:Double,radius:Double,color:Color) {
-        self.polygon(center:center,count:count,rotation:rotation,radius:radius,paint:Paint(parent:self,color:color))
+    public func polygon(center: Point, count: Int, rotation: Double, radius: Double, color: Color) {
+        self.polygon(
+            center: center, count: count, rotation: rotation, radius: radius,
+            paint: Paint(parent: self, color: color))
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func rosace(center:Point,count:Int,rotation:Double,r0:Double,r1:Double,paint:Paint) {
-        if r0>0.1 || r1>0.1 {
-            let p=Path()
-            let da=ß.π*2/Double(count)
-            let da2=0.5*da
-            var a=rotation
-            p.append(Path.Segment.moveTo(center+Point(angle:a,radius:r0)))
+    public func rosace(
+        center: Point, count: Int, rotation: Double, r0: Double, r1: Double, paint: Paint
+    ) {
+        if r0 > 0.1 || r1 > 0.1 {
+            let p = Path()
+            let da = ß.π * 2 / Double(count)
+            let da2 = 0.5 * da
+            var a = rotation
+            p.append(Path.Segment.moveTo(center + Point(angle: a, radius: r0)))
             for _ in 1...count {
                 let ma = a + da2
-                a = a+da
-                p.append(Path.Segment.quadTo(center+Point(angle:ma,radius:r1),center+Point(angle:a,radius:r0)))
-                p.append(Path.Segment.lineTo(center+Point(angle:a,radius:r0)))   // why  ??  was moveTo in C#
+                a = a + da
+                p.append(
+                    Path.Segment.quadTo(
+                        center + Point(angle: ma, radius: r1), center + Point(angle: a, radius: r0))
+                )
+                p.append(Path.Segment.lineTo(center + Point(angle: a, radius: r0)))  // why  ??  was moveTo in C#
             }
-            draw(p,paint)
+            draw(p, paint)
         }
     }
-    public func rosace(center:Point,count:Int,rotation:Double,r0:Double,r1:Double,color:Color) {
-        self.rosace(center: center, count: count, rotation: rotation, r0: r0, r1: r1, paint:Paint(parent:self,color:color))
+    public func rosace(
+        center: Point, count: Int, rotation: Double, r0: Double, r1: Double, color: Color
+    ) {
+        self.rosace(
+            center: center, count: count, rotation: rotation, r0: r0, r1: r1,
+            paint: Paint(parent: self, color: color))
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func circle(center pc:Point,radius r:Double,paint:Paint) {
-        if r>0.1 {
-            let p=Path()
-            let cq=0.551915024494
-            let c=r*cq
-            p.append(Path.Segment.moveTo(pc.translate(0,r)))
-            p.append(Path.Segment.cubicTo(pc.translate(c,r),pc.translate(r,c),pc.translate(r,0)))
-            p.append(Path.Segment.cubicTo(pc.translate(r,-c),pc.translate(c,-r),pc.translate(0,-r)))
-            p.append(Path.Segment.cubicTo(pc.translate(-c,-r),pc.translate(-r,-c),pc.translate(-r,0)))
-            p.append(Path.Segment.cubicTo(pc.translate(-r,c),pc.translate(-c,r),pc.translate(0,r)))
-            draw(p,paint)
+    public func circle(center pc: Point, radius r: Double, paint: Paint) {
+        if r > 0.1 {
+            let p = Path()
+            let cq = 0.551915024494
+            let c = r * cq
+            p.append(Path.Segment.moveTo(pc.translate(0, r)))
+            p.append(
+                Path.Segment.cubicTo(pc.translate(c, r), pc.translate(r, c), pc.translate(r, 0)))
+            p.append(
+                Path.Segment.cubicTo(pc.translate(r, -c), pc.translate(c, -r), pc.translate(0, -r)))
+            p.append(
+                Path.Segment.cubicTo(
+                    pc.translate(-c, -r), pc.translate(-r, -c), pc.translate(-r, 0)))
+            p.append(
+                Path.Segment.cubicTo(pc.translate(-r, c), pc.translate(-c, r), pc.translate(0, r)))
+            draw(p, paint)
         }
     }
-    public func circle(center pc:Point,radius r:Double,color:Color) {
-        self.circle(center: pc, radius: r, paint: Paint(parent:self,color:color))
+    public func circle(center pc: Point, radius r: Double, color: Color) {
+        self.circle(center: pc, radius: r, paint: Paint(parent: self, color: color))
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func arcSector(center pc:Point,r0:Double,r1:Double,a0:Double,a1:Double,paint:Paint) {
-        if r0>0.1 || r1>0.1 {
-            let amin=min(a0,a1)
-            let amax=max(a0,a1)
-            let rmin=min(r0,r1)
-            let rmax=max(r0,r1)
-            let p=Path()
-            let sArc={ (r:Double,a1:Double,a2:Double) in
-                let a = (a2-a1)*0.5
-                let x4 = cos(a)*r
-                let y4 = sin(a)*r
+    public func arcSector(
+        center pc: Point, r0: Double, r1: Double, a0: Double, a1: Double, paint: Paint
+    ) {
+        if r0 > 0.1 || r1 > 0.1 {
+            let amin = min(a0, a1)
+            let amax = max(a0, a1)
+            let rmin = min(r0, r1)
+            let rmax = max(r0, r1)
+            let p = Path()
+            let sArc = { (r: Double, a1: Double, a2: Double) in
+                let a = (a2 - a1) * 0.5
+                let x4 = cos(a) * r
+                let y4 = sin(a) * r
                 let x1 = x4
                 let y1 = -y4
                 let k = 0.551915024494
                 let f = k * tan(a)
-                let x2 = x1+f*y4
-                let y2 = y1+f*x4
+                let x2 = x1 + f * y4
+                let y2 = y1 + f * x4
                 let x3 = x2
                 let y3 = -y2
                 let ar = a1 + a
                 let cosar = cos(ar)
                 let sinar = sin(ar)
-                let p2 = pc.translate(x2*cosar-y2*sinar,x2*sinar+y2*cosar)
-                let p3 = pc.translate(x3*cosar-y3*sinar,x3*sinar+y3*cosar)
-                let p4 = pc.translate(r*cos(a2),r*sin(a2))
-                p.append(Path.Segment.cubicTo(p2,p3,p4))
+                let p2 = pc.translate(x2 * cosar - y2 * sinar, x2 * sinar + y2 * cosar)
+                let p3 = pc.translate(x3 * cosar - y3 * sinar, x3 * sinar + y3 * cosar)
+                let p4 = pc.translate(r * cos(a2), r * sin(a2))
+                p.append(Path.Segment.cubicTo(p2, p3, p4))
             }
             let ia = ß.π * 0.5
-            p.append(Path.Segment.moveTo(pc+Point(angle:amin,radius:rmin)))
-            p.append(Path.Segment.lineTo(pc+Point(angle:amin,radius:rmax)))
-            var aa=amin
-            while aa<amax {
-                let ae = min(aa+ia,amax)
-                sArc(rmax,aa,ae)
+            p.append(Path.Segment.moveTo(pc + Point(angle: amin, radius: rmin)))
+            p.append(Path.Segment.lineTo(pc + Point(angle: amin, radius: rmax)))
+            var aa = amin
+            while aa < amax {
+                let ae = min(aa + ia, amax)
+                sArc(rmax, aa, ae)
                 aa += ia
             }
-            p.append(Path.Segment.lineTo(pc+Point(angle:amax,radius:rmin)))
-            aa=amax
-            while aa>amin {
-                let ae = max(aa-ia,amin)
-                sArc(rmin,aa,ae)
+            p.append(Path.Segment.lineTo(pc + Point(angle: amax, radius: rmin)))
+            aa = amax
+            while aa > amin {
+                let ae = max(aa - ia, amin)
+                sArc(rmin, aa, ae)
                 aa -= ia
             }
-            draw(p,paint)
+            draw(p, paint)
         }
     }
-    public func arcSector(center pc:Point,r0:Double,r1:Double,a0:Double,a1:Double,color:Color) {
-        self.arcSector(center: pc, r0: r0, r1: r1, a0: a0, a1: a1, paint: Paint(parent:self,color:color))
+    public func arcSector(
+        center pc: Point, r0: Double, r1: Double, a0: Double, a1: Double, color: Color
+    ) {
+        self.arcSector(
+            center: pc, r0: r0, r1: r1, a0: a0, a1: a1, paint: Paint(parent: self, color: color))
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func arcSector(center pc:Point,radius r:Double,a0:Double,a1:Double,paint:Paint)
+    public func arcSector(center pc: Point, radius r: Double, a0: Double, a1: Double, paint: Paint)
     {
-        if r>0.1 {
-            let amin=min(a0,a1)
-            let amax=max(a0,a1)
-            let p=Path()
-            let sArc={ (r:Double,a1:Double,a2:Double) in
-                let a = (a2-a1)*0.5
-                let x4 = cos(a)*r
-                let y4 = sin(a)*r
+        if r > 0.1 {
+            let amin = min(a0, a1)
+            let amax = max(a0, a1)
+            let p = Path()
+            let sArc = { (r: Double, a1: Double, a2: Double) in
+                let a = (a2 - a1) * 0.5
+                let x4 = cos(a) * r
+                let y4 = sin(a) * r
                 let x1 = x4
                 let y1 = -y4
                 let k = 0.551915024494
                 let f = k * tan(a)
-                let x2 = x1+f*y4
-                let y2 = y1+f*x4
+                let x2 = x1 + f * y4
+                let y2 = y1 + f * x4
                 let x3 = x2
                 let y3 = -y2
                 let ar = a1 + a
                 let cosar = cos(ar)
                 let sinar = sin(ar)
-                let p2 = pc.translate(x2*cosar-y2*sinar,x2*sinar+y2*cosar)
-                let p3 = pc.translate(x3*cosar-y3*sinar,x3*sinar+y3*cosar)
-                let p4 = pc.translate(r*cos(a2),r*sin(a2))
-                p.append(Path.Segment.cubicTo(p2,p3,p4))
+                let p2 = pc.translate(x2 * cosar - y2 * sinar, x2 * sinar + y2 * cosar)
+                let p3 = pc.translate(x3 * cosar - y3 * sinar, x3 * sinar + y3 * cosar)
+                let p4 = pc.translate(r * cos(a2), r * sin(a2))
+                p.append(Path.Segment.cubicTo(p2, p3, p4))
             }
             let ia = ß.π * 0.5
-            p.append(Path.Segment.moveTo(pc+Point(angle:amin,radius:r)))
-            var aa=amin
-            while aa<amax {
-                let ae = min(aa+ia,amax)
-                sArc(r,aa,ae)
+            p.append(Path.Segment.moveTo(pc + Point(angle: amin, radius: r)))
+            var aa = amin
+            while aa < amax {
+                let ae = min(aa + ia, amax)
+                sArc(r, aa, ae)
                 aa += ia
             }
             p.append(Path.Segment.close())
-            draw(p,paint)
+            draw(p, paint)
         }
     }
-    public func arcSector(center pc:Point,radius r:Double,a0:Double,a1:Double,color:Color) {
-        self.arcSector(center: pc, radius: r, a0: a0, a1: a1, paint: Paint(parent:self,color:color))
+    public func arcSector(center pc: Point, radius r: Double, a0: Double, a1: Double, color: Color)
+    {
+        self.arcSector(
+            center: pc, radius: r, a0: a0, a1: a1, paint: Paint(parent: self, color: color))
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func rectangle(_ rect:Rect,cornerRadius r0:Double = 0,paint:Paint) {
-        let r=min(min(r0,rect.width*0.5),rect.height*0.5)
-        let p=Path()
-        let sArc={ (pc:Point,a1:Double,a2:Double) in
-            guard r>0 else { return }
-            let a = (a2-a1)*0.5
-            let x4 = cos(a)*r
-            let y4 = sin(a)*r
+    public func rectangle(_ rect: Rect, cornerRadius r0: Double = 0, paint: Paint) {
+        let r = min(min(r0, rect.width * 0.5), rect.height * 0.5)
+        let p = Path()
+        let sArc = { (pc: Point, a1: Double, a2: Double) in
+            guard r > 0 else { return }
+            let a = (a2 - a1) * 0.5
+            let x4 = cos(a) * r
+            let y4 = sin(a) * r
             let x1 = x4
             let y1 = -y4
             let k = 0.551915024494
             let f = k * tan(a)
-            let x2 = x1+f*y4
-            let y2 = y1+f*x4
+            let x2 = x1 + f * y4
+            let y2 = y1 + f * x4
             let x3 = x2
             let y3 = -y2
             let ar = a1 + a
             let cosar = cos(ar)
             let sinar = sin(ar)
-            let p2 = pc.translate(x2*cosar-y2*sinar,x2*sinar+y2*cosar)
-            let p3 = pc.translate(x3*cosar-y3*sinar,x3*sinar+y3*cosar)
-            let p4 = pc.translate(r*cos(a2),r*sin(a2))
-            p.append(Path.Segment.cubicTo(p2,p3,p4))
+            let p2 = pc.translate(x2 * cosar - y2 * sinar, x2 * sinar + y2 * cosar)
+            let p3 = pc.translate(x3 * cosar - y3 * sinar, x3 * sinar + y3 * cosar)
+            let p4 = pc.translate(r * cos(a2), r * sin(a2))
+            p.append(Path.Segment.cubicTo(p2, p3, p4))
         }
-        p.append(Path.Segment.moveTo(rect.left+r,rect.top))
-        p.append(Path.Segment.lineTo(rect.right-r,rect.top))
-        sArc(rect.topRight.translate(-r,r),-ß.π2,0)
-        p.append(Path.Segment.lineTo(rect.right,rect.bottom-r))
-        sArc(rect.bottomRight.translate(-r,-r),0,ß.π2)
-        p.append(Path.Segment.lineTo(rect.left+r,rect.bottom))
-        sArc(rect.bottomLeft.translate(r,-r),ß.π2,ß.π)
-        p.append(Path.Segment.lineTo(rect.left,rect.top+r))
-        sArc(rect.topLeft.translate(r,r),ß.π,3*ß.π2)
-        draw(p,paint)
+        p.append(Path.Segment.moveTo(rect.left + r, rect.top))
+        p.append(Path.Segment.lineTo(rect.right - r, rect.top))
+        sArc(rect.topRight.translate(-r, r), -ß.π2, 0)
+        p.append(Path.Segment.lineTo(rect.right, rect.bottom - r))
+        sArc(rect.bottomRight.translate(-r, -r), 0, ß.π2)
+        p.append(Path.Segment.lineTo(rect.left + r, rect.bottom))
+        sArc(rect.bottomLeft.translate(r, -r), ß.π2, ß.π)
+        p.append(Path.Segment.lineTo(rect.left, rect.top + r))
+        sArc(rect.topLeft.translate(r, r), ß.π, 3 * ß.π2)
+        draw(p, paint)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func contains(_ rect:Rect) -> Bool {
-        let vv:[Vec3]=[matrix.transform(Vec3(rect.topLeft)),matrix.transform(Vec3(rect.topRight)),matrix.transform(Vec3(rect.bottomLeft)),matrix.transform(Vec3(rect.bottomRight))]
+    public func contains(_ rect: Rect) -> Bool {
+        let vv: [Vec3] = [
+            matrix.transform(Vec3(rect.topLeft)), matrix.transform(Vec3(rect.topRight)),
+            matrix.transform(Vec3(rect.bottomLeft)), matrix.transform(Vec3(rect.bottomRight)),
+        ]
         var mix = Double.infinity
         var max = -Double.infinity
         var miy = Double.infinity
         var may = -Double.infinity
         for v in vv {
-            if v.x>max {
+            if v.x > max {
                 max = v.x
             }
-            if v.x<mix {
+            if v.x < mix {
                 mix = v.x
             }
-            if v.y>may {
+            if v.y > may {
                 may = v.y
             }
-            if v.y<miy {
+            if v.y < miy {
                 miy = v.y
             }
         }
-        if max<=clip.left {
+        if max <= clip.left {
             return false
         }
-        if mix>=clip.right {
+        if mix >= clip.right {
             return false
         }
-        if may<=clip.top {
+        if may <= clip.top {
             return false
         }
-        if miy>=clip.bottom {
+        if miy >= clip.bottom {
             return false
         }
         return true
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    static func transformClip(_ m:Mat4,_ r:Rect) -> Rect {
-        let tl=m.transform(Vec3(r.topLeft))
-        let br=m.transform(Vec3(r.bottomRight))
-        return Rect(x:min(tl.x,br.x),y:min(tl.y,br.y),w:abs(br.x-tl.x),h:abs(br.y-tl.y))
+    static func transformClip(_ m: Mat4, _ r: Rect) -> Rect {
+        let tl = m.transform(Vec3(r.topLeft))
+        let br = m.transform(Vec3(r.bottomRight))
+        return Rect(
+            x: min(tl.x, br.x), y: min(tl.y, br.y), w: abs(br.x - tl.x), h: abs(br.y - tl.y))
     }
     public func setClipping() -> Bool {
-        let gpu = Mat4.gpu(size:self.output).inverse
+        let gpu = Mat4.gpu(size: self.output).inverse
         let tl = gpu.transform(Vec3(clip.topLeft))
         let br = gpu.transform(Vec3(clip.bottomRight))
-        let r = Rect(x:min(tl.x,br.x),y:min(tl.y,br.y),w:abs(br.x-tl.x),h:abs(br.y-tl.y)).ceil
-        if r.w>0 && r.h>0 {
-            render.clip(rect:r*scale)
+        let r = Rect(
+            x: min(tl.x, br.x), y: min(tl.y, br.y), w: abs(br.x - tl.x), h: abs(br.y - tl.y)
+        ).ceil
+        if r.w > 0 && r.h > 0 {
+            render.clip(rect: r * scale)
             return true
         }
         return false
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public init?(parent g:Graphics,matrix m:Mat4=Mat4.identity,clip:Rect,clipping:Bool=false) {
-        self.matrix=m*g.matrix
-        self.output=g.output
-        self.scale=g.scale
-        let c = g.clip.intersection(Graphics.transformClip(self.matrix,clip))
+    public init?(
+        parent g: Graphics, matrix m: Mat4 = Mat4.identity, clip: Rect, clipping: Bool = false
+    ) {
+        self.matrix = m * g.matrix
+        self.output = g.output
+        self.scale = g.scale
+        let c = g.clip.intersection(Graphics.transformClip(self.matrix, clip))
         self.clip = c
         if clipping && (c.w <= 0 || c.h <= 0) {
             return nil
         }
-        self.render=g.render
-        self.clipping=clipping
+        self.render = g.render
+        self.clipping = clipping
         renderOwner = false
-        super.init(parent:g)
+        super.init(parent: g)
         if clipping && !self.setClipping() {
             return nil
         }
     }
-    public init(parent g:Graphics,matrix m:Mat4=Mat4.identity) {
-        self.matrix=m*g.matrix
-        self.output=g.output
-        self.scale=g.scale
-        self.clip=g.clip
-        self.render=g.render
+    public init(parent g: Graphics, matrix m: Mat4 = Mat4.identity) {
+        self.matrix = m * g.matrix
+        self.output = g.output
+        self.scale = g.scale
+        self.clip = g.clip
+        self.render = g.render
         renderOwner = false
-        super.init(parent:g)
+        super.init(parent: g)
     }
-    public init(parent:NodeUI,graphics g:Graphics,matrix m:Mat4=Mat4.identity) {
-        self.matrix=m*g.matrix
-        self.output=g.output
-        self.scale=g.scale
-        self.clip=g.clip
-        self.render=g.render
+    public init(parent: NodeUI, graphics g: Graphics, matrix m: Mat4 = Mat4.identity) {
+        self.matrix = m * g.matrix
+        self.output = g.output
+        self.scale = g.scale
+        self.clip = g.clip
+        self.render = g.render
         renderOwner = false
-        super.init(parent:parent)
+        super.init(parent: parent)
     }
-    public init(viewport:Viewport,descriptor:MTLRenderPassDescriptor,drawable:CAMetalDrawable,depth:MTLTexture?=nil,clear:Color?=nil,depthClear:Double=1.0,clip:Rect?=nil) {
-        let m = Mat4.gpu(size:viewport.size)
-        self.matrix=m
-        self.output=viewport.size
-        self.scale=Size(1,1)   // viewport.scale used only on mac, utilisé en gruge // TODO: better
-        self.clip = Graphics.transformClip(m,(clip ?? Rect(o:Point.zero,s:viewport.size)))
-        self.render=RenderPass(viewport:viewport,clear:clear,depthClear:depthClear,descriptor:descriptor,drawable:drawable,depth:depth)
+    public init(
+        viewport: Viewport, descriptor: MTLRenderPassDescriptor, drawable: CAMetalDrawable,
+        depth: MTLTexture? = nil, clear: Color? = nil, depthClear: Double = 1.0, clip: Rect? = nil
+    ) {
+        let m = Mat4.gpu(size: viewport.size)
+        self.matrix = m
+        self.output = viewport.size
+        self.scale = Size(1, 1)  // viewport.scale used only on mac, utilisé en gruge // TODO: better
+        self.clip = Graphics.transformClip(m, (clip ?? Rect(o: Point.zero, s: viewport.size)))
+        self.render = RenderPass(
+            viewport: viewport, clear: clear, depthClear: depthClear, descriptor: descriptor,
+            drawable: drawable, depth: depth)
         renderOwner = true
-        super.init(parent:viewport)
+        super.init(parent: viewport)
     }
-    public init(image:Bitmap,clear:Color?=nil,depthClear:Double?=nil,depthStore:Bool=false,clip:Rect?=nil) {
-        let m = Mat4.gpu(size:image.size)
-        self.matrix=m
-        self.output=image.size
-        self.scale=image.scale
-        self.clip = Graphics.transformClip(m,(clip ?? image.bounds))
-        self.render=RenderPass(texture:image,clear:clear,depthClear:depthClear,storeDepth:depthStore)
+    public init(
+        image: Bitmap, clear: Color? = nil, depthClear: Double? = nil, depthStore: Bool = false,
+        clip: Rect? = nil
+    ) {
+        let m = Mat4.gpu(size: image.size)
+        self.matrix = m
+        self.output = image.size
+        self.scale = image.scale
+        self.clip = Graphics.transformClip(m, (clip ?? image.bounds))
+        self.render = RenderPass(
+            texture: image, clear: clear, depthClear: depthClear, storeDepth: depthStore)
         renderOwner = true
-        super.init(parent:image)
+        super.init(parent: image)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     deinit {
         if renderOwner {
-            let r=render
+            let r = render
             r.onDone.once { ok in
                 r.detach()
             }
@@ -910,95 +1144,95 @@ open class Graphics : NodeUI {
                     break
                 }
             }
-            
+
         }
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func depthStencil(state:String) {
+    public func depthStencil(state: String) {
         if let d = self[state] as? DepthStencilState {
-            render.use(state:d)
+            render.use(state: d)
         }
     }
-    public func program(_ prog:String,blend:BlendMode=BlendMode.opaque) {
-        var pn:String=""
+    public func program(_ prog: String, blend: BlendMode = BlendMode.opaque) {
+        var pn: String = ""
         switch blend {
         case .copy:
-            pn = prog+".copy"
+            pn = prog + ".copy"
         case .mask:
-            pn = prog+".copy"
+            pn = prog + ".copy"
         case .opaque:
-            pn = prog+".opaque"
+            pn = prog + ".opaque"
         case .alpha:
-            pn = prog+".alpha"
+            pn = prog + ".alpha"
         case .setAlpha:
-            pn = prog+".setalpha"
+            pn = prog + ".setalpha"
         case .mulAlpha:
-            pn = prog+".mulalpha"
+            pn = prog + ".mulalpha"
         case .color:
-            pn = prog+".color"
+            pn = prog + ".color"
         case .add:
-            pn = prog+".add"
+            pn = prog + ".add"
         case .sub:
-            pn = prog+".sub"
+            pn = prog + ".sub"
         case .multiply:
-            pn = prog+".multiply"
+            pn = prog + ".multiply"
         case .luma:
-            pn = prog+".luma"
+            pn = prog + ".luma"
         case .lumaAlpha:
-            pn = prog+".luma.alpha"
+            pn = prog + ".luma.alpha"
         case .lumaAdd:
-            pn = prog+".luma.add"
+            pn = prog + ".luma.add"
         case .lumaSub:
-            pn = prog+".luma.sub"
+            pn = prog + ".luma.sub"
         case .lumaMultiply:
-            pn = prog+".luma.multiply"
+            pn = prog + ".luma.multiply"
         case .screen:
-            pn = prog+".screen"
+            pn = prog + ".screen"
         case .overlay:
-            pn = prog+".overlay"
+            pn = prog + ".overlay"
         case .lighten:
-            pn = prog+".lighten"
+            pn = prog + ".lighten"
         case .darken:
-            pn = prog+".darken"
+            pn = prog + ".darken"
         case .average:
-            pn = prog+".average"
+            pn = prog + ".average"
         case .substract:
-            pn = prog+".substract"
+            pn = prog + ".substract"
         case .difference:
-            pn = prog+".difference"
+            pn = prog + ".difference"
         case .negation:
-            pn = prog+".negation"
+            pn = prog + ".negation"
         case .colorDodge:
-            pn = prog+".colordodge"
+            pn = prog + ".colordodge"
         case .colorBurn:
-            pn = prog+".colorburn"
+            pn = prog + ".colorburn"
         case .softLight:
-            pn = prog+".softlight"
+            pn = prog + ".softlight"
         case .hardLight:
-            pn = prog+".hardlight"
+            pn = prog + ".hardlight"
         case .linearLight:
-            pn = prog+".linearlight"
+            pn = prog + ".linearlight"
         case .linearBurn:
-            pn = prog+".linearburn"
+            pn = prog + ".linearburn"
         case .exclusion:
-            pn = prog+".exclusion"
+            pn = prog + ".exclusion"
         case .reflect:
-            pn = prog+".reflect"
+            pn = prog + ".reflect"
         case .glow:
-            pn = prog+".glow"
+            pn = prog + ".glow"
         case .phoenix:
-            pn = prog+".phoenix"
+            pn = prog + ".phoenix"
         }
-        if let p=self[pn] as? Program {
-            render.use(program:p)
+        if let p = self[pn] as? Program {
+            render.use(program: p)
         } else {
-            Debug.error("program \"\(pn)\" not defined",#file,#line)
+            Debug.error("program \"\(pn)\" not defined", #file, #line)
         }
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func sampler(_ sampler:String)  {
-        if let s=self[sampler] as? Sampler {
+    public func sampler(_ sampler: String) {
+        if let s = self[sampler] as? Sampler {
             render.use(s)
         } else {
             Debug.error("Not found")
@@ -1006,166 +1240,358 @@ open class Graphics : NodeUI {
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func buffer(_ size:Int) -> Buffer {
-        let b=viewport!.gpu.buffers!.get(size)
+    public func buffer(_ size: Int) -> Buffer {
+        let b = viewport!.gpu.buffers!.get(size)
         render.onDone.once { ok in
             b.recycle()
         }
         return b
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func colorVertices(_ n:Int) -> UnsafeMutablePointer<ColorVertice> {
-        let b=buffer(n * MemoryLayout<ColorVertice>.stride)
-        render.use(vertexBuffer:b,atIndex:0)
+    public func colorVertices(_ n: Int) -> UnsafeMutablePointer<ColorVertice> {
+        let b = buffer(n * MemoryLayout<ColorVertice>.stride)
+        render.use(vertexBuffer: b, atIndex: 0)
         return b.ptr.assumingMemoryBound(to: ColorVertice.self)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func textureVertices(_ n:Int) -> UnsafeMutablePointer<TextureVertice> {
+    public func textureVertices(_ n: Int) -> UnsafeMutablePointer<TextureVertice> {
         // http://metalkit.org/2017/04/30/working-with-memory-in-metal.html
-        let b=buffer(n * MemoryLayout<TextureVertice>.stride)
-        render.use(vertexBuffer:b,atIndex:0)
+        let b = buffer(n * MemoryLayout<TextureVertice>.stride)
+        render.use(vertexBuffer: b, atIndex: 0)
         return b.ptr.assumingMemoryBound(to: TextureVertice.self)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func textureMaskVertices(_ n:Int) -> UnsafeMutablePointer<TextureMaskVertice> {
-        let b=buffer(n * MemoryLayout<TextureMaskVertice>.stride)
-        render.use(vertexBuffer:b,atIndex:0)
+    public func textureMaskVertices(_ n: Int) -> UnsafeMutablePointer<TextureMaskVertice> {
+        let b = buffer(n * MemoryLayout<TextureMaskVertice>.stride)
+        render.use(vertexBuffer: b, atIndex: 0)
         return b.ptr.assumingMemoryBound(to: TextureMaskVertice.self)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    func blurVertices(_ n:Int) -> UnsafeMutablePointer<BlurVertice> {
-        let b=buffer(n * MemoryLayout<BlurVertice>.stride)
-        render.use(vertexBuffer:b,atIndex:0)
+    func blurVertices(_ n: Int) -> UnsafeMutablePointer<BlurVertice> {
+        let b = buffer(n * MemoryLayout<BlurVertice>.stride)
+        render.use(vertexBuffer: b, atIndex: 0)
         return b.ptr.assumingMemoryBound(to: BlurVertice.self)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    func blendVertices(_ n:Int) -> UnsafeMutablePointer<BlendVertice> {
-        let b=buffer(n * MemoryLayout<BlendVertice>.stride)
-        render.use(vertexBuffer:b,atIndex:0)
+    func blendVertices(_ n: Int) -> UnsafeMutablePointer<BlendVertice> {
+        let b = buffer(n * MemoryLayout<BlendVertice>.stride)
+        render.use(vertexBuffer: b, atIndex: 0)
         return b.ptr.assumingMemoryBound(to: BlendVertice.self)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func uniforms(_ matrix:Mat4)   {
-        let b=buffer(MemoryLayout<Uniforms>.stride)
-        let ptr=b.ptr.assumingMemoryBound(to: Uniforms.self)
-        ptr[0]=Uniforms(matrix:matrix.infloat4x4)
-        render.use(vertexBuffer:b,atIndex:1)
+    public func uniforms(_ matrix: Mat4) {
+        let b = buffer(MemoryLayout<Uniforms>.stride)
+        let ptr = b.ptr.assumingMemoryBound(to: Uniforms.self)
+        ptr[0] = Uniforms(matrix: matrix.infloat4x4)
+        render.use(vertexBuffer: b, atIndex: 1)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func uniforms(view:Mat4,world:Mat4,eye:Vec3)   {
-        let b=buffer(MemoryLayout<Uniforms3D>.stride)
-        let ptr=b.ptr.assumingMemoryBound(to: Uniforms3D.self)
-        ptr[0]=Uniforms3D(view:view.infloat4x4,world:world.infloat4x4,eye:eye.infloat3)
-        render.use(vertexBuffer:b,atIndex:1)
+    public func uniforms(view: Mat4, world: Mat4, eye: Vec3) {
+        let b = buffer(MemoryLayout<Uniforms3D>.stride)
+        let ptr = b.ptr.assumingMemoryBound(to: Uniforms3D.self)
+        ptr[0] = Uniforms3D(view: view.infloat4x4, world: world.infloat4x4, eye: eye.infloat3)
+        render.use(vertexBuffer: b, atIndex: 1)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func uniforms(buffer b:Buffer,atIndex i:Int)   {
-        render.use(vertexBuffer:b,atIndex:i)
+    public func uniforms(buffer b: Buffer, atIndex i: Int) {
+        render.use(vertexBuffer: b, atIndex: i)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    static func globals(_ viewport:Viewport) {
-        viewport["program.color.copy"]=Program(viewport:viewport,vertex:"colorFuncVertex",fragment:"colorFuncFragment",blend:BlendMode.copy,vertexFormat:[.float3,.float4])
-        viewport["program.color.opaque"]=Program(viewport:viewport,vertex:"colorFuncVertex",fragment:"colorFuncFragment",blend:BlendMode.opaque,vertexFormat:[.float3,.float4])
-        viewport["program.color.alpha"]=Program(viewport:viewport,vertex:"colorFuncVertex",fragment:"colorFuncFragment",blend:BlendMode.alpha,vertexFormat:[.float3,.float4])
-        viewport["program.color.setalpha"]=Program(viewport:viewport,vertex:"colorFuncVertex",fragment:"colorFuncFragment",blend:BlendMode.setAlpha,vertexFormat:[.float3,.float4])
-        viewport["program.color.add"]=Program(viewport:viewport,vertex:"colorFuncVertex",fragment:"colorFuncFragment",blend:BlendMode.add,vertexFormat:[.float3,.float4])
-        viewport["program.color.sub"]=Program(viewport:viewport,vertex:"colorFuncVertex",fragment:"colorFuncFragment",blend:BlendMode.sub,vertexFormat:[.float3,.float4])
-#if os(tvOS) || os(iOS) || os(macOS)
-        viewport["program.color.multiply"]=Program(viewport:viewport,vertex:"colorFuncVertex",fragment:"colorBlendMultiply",blend:BlendMode.opaque,vertexFormat:[.float3,.float4])
-        viewport["program.color.screen"]=Program(viewport:viewport,vertex:"colorFuncVertex",fragment:"colorBlendScreen",blend:BlendMode.opaque,vertexFormat:[.float3,.float4])
-        viewport["program.color.overlay"]=Program(viewport:viewport,vertex:"colorFuncVertex",fragment:"colorBlendOverlay",blend:BlendMode.opaque,vertexFormat:[.float3,.float4])
-        viewport["program.color.softlight"]=Program(viewport:viewport,vertex:"colorFuncVertex",fragment:"colorBlendSoftLight",blend:BlendMode.opaque,vertexFormat:[.float3,.float4])
-        viewport["program.color.lighten"]=Program(viewport:viewport,vertex:"colorFuncVertex",fragment:"colorBlendLighten",blend:BlendMode.opaque,vertexFormat:[.float3,.float4])
-        viewport["program.color.darken"]=Program(viewport:viewport,vertex:"colorFuncVertex",fragment:"colorBlendDarken",blend:BlendMode.opaque,vertexFormat:[.float3,.float4])
-        viewport["program.color.average"]=Program(viewport:viewport,vertex:"colorFuncVertex",fragment:"colorBlendAverage",blend:BlendMode.opaque,vertexFormat:[.float3,.float4])
-        viewport["program.color.substract"]=Program(viewport:viewport,vertex:"colorFuncVertex",fragment:"colorBlendSubstract",blend:BlendMode.opaque,vertexFormat:[.float3,.float4])
-        viewport["program.color.difference"]=Program(viewport:viewport,vertex:"colorFuncVertex",fragment:"colorBlendDifference",blend:BlendMode.opaque,vertexFormat:[.float3,.float4])
-        viewport["program.color.negation"]=Program(viewport:viewport,vertex:"colorFuncVertex",fragment:"colorBlendNegation",blend:BlendMode.opaque,vertexFormat:[.float3,.float4])
-        viewport["program.color.colordodge"]=Program(viewport:viewport,vertex:"colorFuncVertex",fragment:"colorBlendColorDodge",blend:BlendMode.opaque,vertexFormat:[.float3,.float4])
-        viewport["program.color.colorburn"]=Program(viewport:viewport,vertex:"colorFuncVertex",fragment:"colorBlendColorBurn",blend:BlendMode.opaque,vertexFormat:[.float3,.float4])
-        viewport["program.color.hardlight"]=Program(viewport:viewport,vertex:"colorFuncVertex",fragment:"colorBlendHardLight",blend:BlendMode.opaque,vertexFormat:[.float3,.float4])
-        viewport["program.color.linearlight"]=Program(viewport:viewport,vertex:"colorFuncVertex",fragment:"colorBlendLinearLight",blend:BlendMode.opaque,vertexFormat:[.float3,.float4])
-        viewport["program.color.linearvurn"]=Program(viewport:viewport,vertex:"colorFuncVertex",fragment:"colorBlendLinearBurn",blend:BlendMode.opaque,vertexFormat:[.float3,.float4])
-        viewport["program.color.reflect"]=Program(viewport:viewport,vertex:"colorFuncVertex",fragment:"colorBlendReflect",blend:BlendMode.opaque,vertexFormat:[.float3,.float4])
-        viewport["program.color.glow"]=Program(viewport:viewport,vertex:"colorFuncVertex",fragment:"colorBlendGlow",blend:BlendMode.opaque,vertexFormat:[.float3,.float4])
-        viewport["program.color.phoenix"]=Program(viewport:viewport,vertex:"colorFuncVertex",fragment:"colorBlendPhoenix",blend:BlendMode.opaque,vertexFormat:[.float3,.float4])
-        viewport["program.color.exclusion"]=Program(viewport:viewport,vertex:"colorFuncVertex",fragment:"colorBlendExclusion",blend:BlendMode.opaque,vertexFormat:[.float3,.float4])
-#endif
-        viewport["program.texture.copy"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"textureFuncFragment",floatShaders:true, blend:BlendMode.copy,vertexFormat:[.float3,.float4,.float2])
-        viewport["program.texture.opaque"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"textureFuncFragment",floatShaders:true,blend:BlendMode.opaque,vertexFormat:[.float3,.float4,.float2])
-        viewport["program.texture.alpha"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"textureFuncFragment",floatShaders:true,blend:BlendMode.alpha,vertexFormat:[.float3,.float4,.float2])
-        viewport["program.texture.setalpha"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"textureFuncFragmentSetAlpha",blend:BlendMode.setAlpha,vertexFormat:[.float3,.float4,.float2])
-        viewport["program.texture.color"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"textureFuncFragmentColor",blend:BlendMode.alpha,vertexFormat:[.float3,.float4,.float2])
-        viewport["program.texture.add"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"textureFuncFragment",floatShaders:true,blend:BlendMode.add,vertexFormat:[.float3,.float4,.float2])
-        viewport["program.texture.sub"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"textureFuncFragment",floatShaders:true,blend:BlendMode.sub,vertexFormat:[.float3,.float4,.float2])
-#if os(tvOS) || os(iOS) || os(macOS)
-        viewport["program.texture.mulalpha"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"textureFuncFragmentMulAlpha",blend:BlendMode.setAlpha,vertexFormat:[.float3,.float4,.float2])
-        viewport["program.texture.multiply"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"textureBlendMultiply",blend:BlendMode.opaque,vertexFormat:[.float3,.float4,.float2])
-        viewport["program.texture.luma"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"textureLuma",blend:BlendMode.opaque,vertexFormat:[.float3,.float4,.float2])
-        viewport["program.texture.luma.alpha"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"textureLuma",blend:BlendMode.alpha,vertexFormat:[.float3,.float4,.float2])
-        viewport["program.texture.luma.add"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"textureLuma",blend:BlendMode.add,vertexFormat:[.float3,.float4,.float2])
-        viewport["program.texture.luma.sub"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"textureLuma",blend:BlendMode.sub,vertexFormat:[.float3,.float4,.float2])
-        viewport["program.texture.luma.multiply"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"textureBlendMultiplyLuma",blend:BlendMode.opaque,vertexFormat:[.float3,.float4,.float2])
-        viewport["program.texture.screen"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"textureBlendScreen",blend:BlendMode.opaque,vertexFormat:[.float3,.float4,.float2])
-        viewport["program.texture.overlay"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"textureBlendOverlay",blend:BlendMode.opaque,vertexFormat:[.float3,.float4,.float2])
-        viewport["program.texture.softlight"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"textureBlendSoftLight",blend:BlendMode.opaque,vertexFormat:[.float3,.float4,.float2])
-        viewport["program.texture.lighten"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"textureBlendLighten",blend:BlendMode.opaque,vertexFormat:[.float3,.float4,.float2])
-        viewport["program.texture.darken"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"textureBlendDarken",blend:BlendMode.opaque,vertexFormat:[.float3,.float4,.float2])
-        viewport["program.texture.average"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"textureBlendAverage",blend:BlendMode.opaque,vertexFormat:[.float3,.float4,.float2])
-        viewport["program.texture.substract"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"textureBlendSubstract",blend:BlendMode.opaque,vertexFormat:[.float3,.float4,.float2])
-        viewport["program.texture.difference"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"textureBlendDifference",blend:BlendMode.opaque,vertexFormat:[.float3,.float4,.float2])
-        viewport["program.texture.negation"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"textureBlendNegation",blend:BlendMode.opaque,vertexFormat:[.float3,.float4,.float2])
-        viewport["program.texture.colordodge"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"textureBlendColorDodge",blend:BlendMode.opaque,vertexFormat:[.float3,.float4,.float2])
-        viewport["program.texture.colorburn"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"textureBlendColorBurn",blend:BlendMode.opaque,vertexFormat:[.float3,.float4,.float2])
-        viewport["program.texture.hardlight"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"textureBlendHardLight",blend:BlendMode.opaque,vertexFormat:[.float3,.float4,.float2])
-        viewport["program.texture.linearlight"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"textureBlendLinearLight",blend:BlendMode.opaque,vertexFormat:[.float3,.float4,.float2])
-        viewport["program.texture.linearburn"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"textureBlendLinearBurn",blend:BlendMode.opaque,vertexFormat:[.float3,.float4,.float2])
-        viewport["program.texture.reflect"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"textureBlendReflect",blend:BlendMode.opaque,vertexFormat:[.float3,.float4,.float2])
-        viewport["program.texture.glow"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"textureBlendGlow",blend:BlendMode.opaque,vertexFormat:[.float3,.float4,.float2])
-        viewport["program.texture.phoenix"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"textureBlendPhoenix",blend:BlendMode.opaque,vertexFormat:[.float3,.float4,.float2])
-        viewport["program.texture.exclusion"]=Program(viewport:viewport,vertex:"textureFuncVertex",fragment:"textureBlendExclusion",blend:BlendMode.opaque,vertexFormat:[.float3,.float4,.float2])
-#endif
-        Program.populateDefaultBlendModes(store: viewport, key: "program.texture.mask", library: viewport.gpu.library!, vertex: "textureFuncVertex", fragment: "textureMaskFragment", vertexFormat: [.float3,.float4,.float2])
-        Program.populateDefaultBlendModes(store: viewport, key: "program.texture.bitmap.mask", library: viewport.gpu.library!, vertex: "textureBitmapMaskFuncVertex", fragment: "textureBitmapMaskFragment", vertexFormat: [.float3,.float4,.float2])
-        Program.populateDefaultBlendModes(store: viewport, key: "program.gradient.mask", library: viewport.gpu.library!, vertex: "textureBitmapMaskFuncVertex", fragment: "textureGradientMaskFragment", vertexFormat: [.float3,.float4,.float2])
-        viewport["program.blur.horizontal.copy"]=Program(viewport:viewport,vertex:"blurFuncVertex",fragment:"blurH",blend:BlendMode.copy,vertexFormat:[.float3,.float2])
-        viewport["program.blur.vertical.copy"]=Program(viewport:viewport,vertex:"blurFuncVertex",fragment:"blurV",blend:BlendMode.copy,vertexFormat:[.float3,.float2])
-        viewport["sampler.clamp"]=Sampler(viewport:viewport,modeX:Sampler.Mode.clamp,modeY:Sampler.Mode.clamp)
-        viewport["sampler.wrap"]=Sampler(viewport:viewport,modeX:Sampler.Mode.wrap,modeY:Sampler.Mode.wrap)
-        viewport["sampler.mirror"]=Sampler(viewport:viewport,modeX:Sampler.Mode.mirror,modeY:Sampler.Mode.mirror)
-        viewport["sampler.clamp.wrap"]=Sampler(viewport:viewport,modeX:Sampler.Mode.clamp,modeY:Sampler.Mode.wrap)
-        viewport["sampler.wrap.clamp"]=Sampler(viewport:viewport,modeX:Sampler.Mode.wrap,modeY:Sampler.Mode.clamp)
-        viewport["sampler.mirror.clamp"]=Sampler(viewport:viewport,modeX:Sampler.Mode.mirror,modeY:Sampler.Mode.clamp)
-        viewport["sampler.clamp.mirror"]=Sampler(viewport:viewport,modeX:Sampler.Mode.clamp,modeY:Sampler.Mode.mirror)
-        viewport["font.default"]=Font(parent:viewport,name:"Helvetica",size:24)
-        
-        viewport["program.blend.multiply"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendMultiply",blend:BlendMode.opaque,vertexFormat:[.float3,.float2])
-        viewport["program.blend.screen"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendScreen",blend:BlendMode.opaque,vertexFormat:[.float3,.float2])
-        viewport["program.blend.overlay"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendOverlay",blend:BlendMode.opaque,vertexFormat:[.float3,.float2])
-        viewport["program.blend.softlight"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendSoftLight",blend:BlendMode.opaque,vertexFormat:[.float3,.float2])
-        viewport["program.blend.add"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendAdd",blend:BlendMode.opaque,vertexFormat:[.float3,.float2])
-        viewport["program.blend.lighten"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendLighten",blend:BlendMode.opaque,vertexFormat:[.float3,.float2])
-        viewport["program.blend.darken"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendDarken",blend:BlendMode.opaque,vertexFormat:[.float3,.float2])
-        viewport["program.blend.average"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendAverage",blend:BlendMode.opaque,vertexFormat:[.float3,.float2])
-        viewport["program.blend.substract"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendSubstract",blend:BlendMode.opaque,vertexFormat:[.float3,.float2])
-        viewport["program.blend.difference"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendDifference",blend:BlendMode.opaque,vertexFormat:[.float3,.float2])
-        viewport["program.blend.negation"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendNegation",blend:BlendMode.opaque,vertexFormat:[.float3,.float2])
-        viewport["program.blend.colordodge"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendColorDodge",blend:BlendMode.opaque,vertexFormat:[.float3,.float2])
-        viewport["program.blend.colorburn"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendColorBurn",blend:BlendMode.opaque,vertexFormat:[.float3,.float2])
-        viewport["program.blend.hardlight"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendHardLight",blend:BlendMode.opaque,vertexFormat:[.float3,.float2])
-        viewport["program.blend.linearlight"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendLinearLight",blend:BlendMode.opaque,vertexFormat:[.float3,.float2])
-        viewport["program.blend.linearburn"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendLinearBurn",blend:BlendMode.opaque,vertexFormat:[.float3,.float2])
-        viewport["program.blend.reflect"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendReflect",blend:BlendMode.opaque,vertexFormat:[.float3,.float2])
-        viewport["program.blend.glow"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendGlow",blend:BlendMode.opaque,vertexFormat:[.float3,.float2])
-        viewport["program.blend.phoenix"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendPhoenix",blend:BlendMode.opaque,vertexFormat:[.float3,.float2])
-        viewport["program.blend.sub"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendSub",blend:BlendMode.opaque,vertexFormat:[.float3,.float2])
-        viewport["program.blend.exclusion"]=Program(viewport:viewport,vertex:"blendFuncVertex",fragment:"blendExclusion",blend:BlendMode.opaque,vertexFormat:[.float3,.float2])
-        
-        Program.populateDefaultBlendModes(store:viewport,key:"program.generate.lut",library:viewport.gpu.library!,vertex:"textureFuncVertex",fragment:"generateLutHsvDecal",vertexFormat: [.float3,.float4,.float2])
-        Program.populateDefaultBlendModes(store:viewport,key:"program.lut",library:viewport.gpu.library!,vertex:"textureFuncVertex",fragment:"textureLutFragment",vertexFormat: [.float3,.float4,.float2])
-        Program.populateDefaultBlendModes(store:viewport,key:"program.gradient",library:viewport.gpu.library!,vertex:"textureFuncVertex",fragment:"gradientFragment",vertexFormat:[.float3,.float4,.float2])
-        Program.populateDefaultBlendModes(store:viewport,key:"program.gradient.height",library:viewport.gpu.library!,vertex:"textureFuncVertex",fragment:"gradientHeightFragment",vertexFormat:[.float3,.float4,.float2])
+    static func globals(_ viewport: Viewport) {
+        viewport["program.color.copy"] = Program(
+            viewport: viewport, vertex: "colorFuncVertex", fragment: "colorFuncFragment",
+            blend: BlendMode.copy, vertexFormat: [.float3, .float4])
+        viewport["program.color.opaque"] = Program(
+            viewport: viewport, vertex: "colorFuncVertex", fragment: "colorFuncFragment",
+            blend: BlendMode.opaque, vertexFormat: [.float3, .float4])
+        viewport["program.color.alpha"] = Program(
+            viewport: viewport, vertex: "colorFuncVertex", fragment: "colorFuncFragment",
+            blend: BlendMode.alpha, vertexFormat: [.float3, .float4])
+        viewport["program.color.setalpha"] = Program(
+            viewport: viewport, vertex: "colorFuncVertex", fragment: "colorFuncFragment",
+            blend: BlendMode.setAlpha, vertexFormat: [.float3, .float4])
+        viewport["program.color.add"] = Program(
+            viewport: viewport, vertex: "colorFuncVertex", fragment: "colorFuncFragment",
+            blend: BlendMode.add, vertexFormat: [.float3, .float4])
+        viewport["program.color.sub"] = Program(
+            viewport: viewport, vertex: "colorFuncVertex", fragment: "colorFuncFragment",
+            blend: BlendMode.sub, vertexFormat: [.float3, .float4])
+        #if os(tvOS) || os(iOS) || os(macOS)
+            viewport["program.color.multiply"] = Program(
+                viewport: viewport, vertex: "colorFuncVertex", fragment: "colorBlendMultiply",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4])
+            viewport["program.color.screen"] = Program(
+                viewport: viewport, vertex: "colorFuncVertex", fragment: "colorBlendScreen",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4])
+            viewport["program.color.overlay"] = Program(
+                viewport: viewport, vertex: "colorFuncVertex", fragment: "colorBlendOverlay",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4])
+            viewport["program.color.softlight"] = Program(
+                viewport: viewport, vertex: "colorFuncVertex", fragment: "colorBlendSoftLight",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4])
+            viewport["program.color.lighten"] = Program(
+                viewport: viewport, vertex: "colorFuncVertex", fragment: "colorBlendLighten",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4])
+            viewport["program.color.darken"] = Program(
+                viewport: viewport, vertex: "colorFuncVertex", fragment: "colorBlendDarken",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4])
+            viewport["program.color.average"] = Program(
+                viewport: viewport, vertex: "colorFuncVertex", fragment: "colorBlendAverage",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4])
+            viewport["program.color.substract"] = Program(
+                viewport: viewport, vertex: "colorFuncVertex", fragment: "colorBlendSubstract",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4])
+            viewport["program.color.difference"] = Program(
+                viewport: viewport, vertex: "colorFuncVertex", fragment: "colorBlendDifference",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4])
+            viewport["program.color.negation"] = Program(
+                viewport: viewport, vertex: "colorFuncVertex", fragment: "colorBlendNegation",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4])
+            viewport["program.color.colordodge"] = Program(
+                viewport: viewport, vertex: "colorFuncVertex", fragment: "colorBlendColorDodge",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4])
+            viewport["program.color.colorburn"] = Program(
+                viewport: viewport, vertex: "colorFuncVertex", fragment: "colorBlendColorBurn",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4])
+            viewport["program.color.hardlight"] = Program(
+                viewport: viewport, vertex: "colorFuncVertex", fragment: "colorBlendHardLight",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4])
+            viewport["program.color.linearlight"] = Program(
+                viewport: viewport, vertex: "colorFuncVertex", fragment: "colorBlendLinearLight",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4])
+            viewport["program.color.linearvurn"] = Program(
+                viewport: viewport, vertex: "colorFuncVertex", fragment: "colorBlendLinearBurn",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4])
+            viewport["program.color.reflect"] = Program(
+                viewport: viewport, vertex: "colorFuncVertex", fragment: "colorBlendReflect",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4])
+            viewport["program.color.glow"] = Program(
+                viewport: viewport, vertex: "colorFuncVertex", fragment: "colorBlendGlow",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4])
+            viewport["program.color.phoenix"] = Program(
+                viewport: viewport, vertex: "colorFuncVertex", fragment: "colorBlendPhoenix",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4])
+            viewport["program.color.exclusion"] = Program(
+                viewport: viewport, vertex: "colorFuncVertex", fragment: "colorBlendExclusion",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4])
+        #endif
+        viewport["program.texture.copy"] = Program(
+            viewport: viewport, vertex: "textureFuncVertex", fragment: "textureFuncFragment",
+            floatShaders: true, blend: BlendMode.copy, vertexFormat: [.float3, .float4, .float2])
+        viewport["program.texture.opaque"] = Program(
+            viewport: viewport, vertex: "textureFuncVertex", fragment: "textureFuncFragment",
+            floatShaders: true, blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+        viewport["program.texture.alpha"] = Program(
+            viewport: viewport, vertex: "textureFuncVertex", fragment: "textureFuncFragment",
+            floatShaders: true, blend: BlendMode.alpha, vertexFormat: [.float3, .float4, .float2])
+        viewport["program.texture.setalpha"] = Program(
+            viewport: viewport, vertex: "textureFuncVertex",
+            fragment: "textureFuncFragmentSetAlpha", blend: BlendMode.setAlpha,
+            vertexFormat: [.float3, .float4, .float2])
+        viewport["program.texture.color"] = Program(
+            viewport: viewport, vertex: "textureFuncVertex", fragment: "textureFuncFragmentColor",
+            blend: BlendMode.alpha, vertexFormat: [.float3, .float4, .float2])
+        viewport["program.texture.add"] = Program(
+            viewport: viewport, vertex: "textureFuncVertex", fragment: "textureFuncFragment",
+            floatShaders: true, blend: BlendMode.add, vertexFormat: [.float3, .float4, .float2])
+        viewport["program.texture.sub"] = Program(
+            viewport: viewport, vertex: "textureFuncVertex", fragment: "textureFuncFragment",
+            floatShaders: true, blend: BlendMode.sub, vertexFormat: [.float3, .float4, .float2])
+        #if os(tvOS) || os(iOS) || os(macOS)
+            viewport["program.texture.mulalpha"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex",
+                fragment: "textureFuncFragmentMulAlpha", blend: BlendMode.setAlpha,
+                vertexFormat: [.float3, .float4, .float2])
+            viewport["program.texture.multiply"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "textureBlendMultiply",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.texture.luma"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "textureLuma",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.texture.luma.alpha"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "textureLuma",
+                blend: BlendMode.alpha, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.texture.luma.add"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "textureLuma",
+                blend: BlendMode.add, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.texture.luma.sub"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "textureLuma",
+                blend: BlendMode.sub, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.texture.luma.multiply"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex",
+                fragment: "textureBlendMultiplyLuma", blend: BlendMode.opaque,
+                vertexFormat: [.float3, .float4, .float2])
+            viewport["program.texture.screen"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "textureBlendScreen",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.texture.overlay"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "textureBlendOverlay",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.texture.softlight"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "textureBlendSoftLight",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.texture.lighten"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "textureBlendLighten",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.texture.darken"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "textureBlendDarken",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.texture.average"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "textureBlendAverage",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.texture.substract"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "textureBlendSubstract",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.texture.difference"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "textureBlendDifference",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.texture.negation"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "textureBlendNegation",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.texture.colordodge"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "textureBlendColorDodge",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.texture.colorburn"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "textureBlendColorBurn",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.texture.hardlight"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "textureBlendHardLight",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.texture.linearlight"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex",
+                fragment: "textureBlendLinearLight", blend: BlendMode.opaque,
+                vertexFormat: [.float3, .float4, .float2])
+            viewport["program.texture.linearburn"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "textureBlendLinearBurn",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.texture.reflect"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "textureBlendReflect",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.texture.glow"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "textureBlendGlow",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.texture.phoenix"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "textureBlendPhoenix",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.texture.exclusion"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "textureBlendExclusion",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+        #endif
+        Program.populateDefaultBlendModes(
+            store: viewport, key: "program.texture.mask", library: viewport.gpu.library!,
+            vertex: "textureFuncVertex", fragment: "textureMaskFragment",
+            vertexFormat: [.float3, .float4, .float2])
+        Program.populateDefaultBlendModes(
+            store: viewport, key: "program.texture.bitmap.mask", library: viewport.gpu.library!,
+            vertex: "textureBitmapMaskFuncVertex", fragment: "textureBitmapMaskFragment",
+            vertexFormat: [.float3, .float4, .float2])
+        Program.populateDefaultBlendModes(
+            store: viewport, key: "program.gradient.mask", library: viewport.gpu.library!,
+            vertex: "textureBitmapMaskFuncVertex", fragment: "textureGradientMaskFragment",
+            vertexFormat: [.float3, .float4, .float2])
+        viewport["program.blur.horizontal.copy"] = Program(
+            viewport: viewport, vertex: "blurFuncVertex", fragment: "blurH", blend: BlendMode.copy,
+            vertexFormat: [.float3, .float2])
+        viewport["program.blur.vertical.copy"] = Program(
+            viewport: viewport, vertex: "blurFuncVertex", fragment: "blurV", blend: BlendMode.copy,
+            vertexFormat: [.float3, .float2])
+        viewport["sampler.clamp"] = Sampler(
+            viewport: viewport, modeX: Sampler.Mode.clamp, modeY: Sampler.Mode.clamp)
+        viewport["sampler.wrap"] = Sampler(
+            viewport: viewport, modeX: Sampler.Mode.wrap, modeY: Sampler.Mode.wrap)
+        viewport["sampler.mirror"] = Sampler(
+            viewport: viewport, modeX: Sampler.Mode.mirror, modeY: Sampler.Mode.mirror)
+        viewport["sampler.clamp.wrap"] = Sampler(
+            viewport: viewport, modeX: Sampler.Mode.clamp, modeY: Sampler.Mode.wrap)
+        viewport["sampler.wrap.clamp"] = Sampler(
+            viewport: viewport, modeX: Sampler.Mode.wrap, modeY: Sampler.Mode.clamp)
+        viewport["sampler.mirror.clamp"] = Sampler(
+            viewport: viewport, modeX: Sampler.Mode.mirror, modeY: Sampler.Mode.clamp)
+        viewport["sampler.clamp.mirror"] = Sampler(
+            viewport: viewport, modeX: Sampler.Mode.clamp, modeY: Sampler.Mode.mirror)
+        viewport["font.default"] = Font(parent: viewport, name: "Helvetica", size: 24)
+
+        viewport["program.blend.multiply"] = Program(
+            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendMultiply",
+            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
+        viewport["program.blend.screen"] = Program(
+            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendScreen",
+            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
+        viewport["program.blend.overlay"] = Program(
+            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendOverlay",
+            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
+        viewport["program.blend.softlight"] = Program(
+            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendSoftLight",
+            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
+        viewport["program.blend.add"] = Program(
+            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendAdd",
+            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
+        viewport["program.blend.lighten"] = Program(
+            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendLighten",
+            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
+        viewport["program.blend.darken"] = Program(
+            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendDarken",
+            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
+        viewport["program.blend.average"] = Program(
+            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendAverage",
+            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
+        viewport["program.blend.substract"] = Program(
+            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendSubstract",
+            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
+        viewport["program.blend.difference"] = Program(
+            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendDifference",
+            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
+        viewport["program.blend.negation"] = Program(
+            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendNegation",
+            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
+        viewport["program.blend.colordodge"] = Program(
+            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendColorDodge",
+            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
+        viewport["program.blend.colorburn"] = Program(
+            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendColorBurn",
+            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
+        viewport["program.blend.hardlight"] = Program(
+            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendHardLight",
+            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
+        viewport["program.blend.linearlight"] = Program(
+            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendLinearLight",
+            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
+        viewport["program.blend.linearburn"] = Program(
+            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendLinearBurn",
+            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
+        viewport["program.blend.reflect"] = Program(
+            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendReflect",
+            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
+        viewport["program.blend.glow"] = Program(
+            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendGlow",
+            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
+        viewport["program.blend.phoenix"] = Program(
+            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendPhoenix",
+            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
+        viewport["program.blend.sub"] = Program(
+            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendSub",
+            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
+        viewport["program.blend.exclusion"] = Program(
+            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendExclusion",
+            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
+
+        Program.populateDefaultBlendModes(
+            store: viewport, key: "program.generate.lut", library: viewport.gpu.library!,
+            vertex: "textureFuncVertex", fragment: "generateLutHsvDecal",
+            vertexFormat: [.float3, .float4, .float2])
+        Program.populateDefaultBlendModes(
+            store: viewport, key: "program.lut", library: viewport.gpu.library!,
+            vertex: "textureFuncVertex", fragment: "textureLutFragment",
+            vertexFormat: [.float3, .float4, .float2])
+        Program.populateDefaultBlendModes(
+            store: viewport, key: "program.gradient", library: viewport.gpu.library!,
+            vertex: "textureFuncVertex", fragment: "gradientFragment",
+            vertexFormat: [.float3, .float4, .float2])
+        Program.populateDefaultBlendModes(
+            store: viewport, key: "program.gradient.height", library: viewport.gpu.library!,
+            vertex: "textureFuncVertex", fragment: "gradientHeightFragment",
+            vertexFormat: [.float3, .float4, .float2])
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1174,62 +1600,65 @@ open class Graphics : NodeUI {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 public struct ColorVertice {
-    var position:SIMD3<Float>
-    var color:SIMD4<Float>
+    var position: SIMD3<Float>
+    var color: SIMD4<Float>
 }
-public struct TextureVertice  {
-    var position:SIMD3<Float>
-    var color:SIMD4<Float>
-    var uv:SIMD2<Float>
-    public init(position:SIMD3<Float>,uv:SIMD2<Float>,color:SIMD4<Float>) {
-        self.position=position
-        self.uv=uv
-        self.color=color
-    }
-}
-public struct TextureMaskVertice  {
-    var position:SIMD3<Float>
-    var color:SIMD4<Float>
-    var uv:SIMD2<Float>
-    var uvmask:SIMD2<Float>
-    public init(position:SIMD3<Float>,uv:SIMD2<Float>,uvmask:SIMD2<Float>,color:SIMD4<Float>) {
-        self.position=position
-        self.uv=uv
-        self.uvmask=uvmask
-        self.color=color
-    }
-}
-struct BlurVertice  {
-    var position:SIMD3<Float>
-    var uv:SIMD2<Float>
-}
-struct Uniforms {
-    var matrix:float4x4
-}
-struct Uniforms3D {
-    var view:float4x4
-    var world:float4x4
-    var eye:SIMD3<Float>
-}
-struct BlendVertice  {
-    var position:SIMD3<Float>
-    var uv:SIMD2<Float>
-}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-public struct Vertice { // public version
-    public var position:Vec3
-    public var color:Color
-    public var uv:Point
-    public init(position:Vec3=Vec3.zero,uv:Point=Point.zero,color:Color=Color.white) {
+public struct TextureVertice {
+    var position: SIMD3<Float>
+    var color: SIMD4<Float>
+    var uv: SIMD2<Float>
+    public init(position: SIMD3<Float>, uv: SIMD2<Float>, color: SIMD4<Float>) {
         self.position = position
         self.uv = uv
         self.color = color
     }
-    public static func trianglesFromQuad(_ v0:Vertice,_ v1:Vertice,_ v2:Vertice,_ v3:Vertice) -> [Vertice] {
+}
+public struct TextureMaskVertice {
+    var position: SIMD3<Float>
+    var color: SIMD4<Float>
+    var uv: SIMD2<Float>
+    var uvmask: SIMD2<Float>
+    public init(position: SIMD3<Float>, uv: SIMD2<Float>, uvmask: SIMD2<Float>, color: SIMD4<Float>)
+    {
+        self.position = position
+        self.uv = uv
+        self.uvmask = uvmask
+        self.color = color
+    }
+}
+struct BlurVertice {
+    var position: SIMD3<Float>
+    var uv: SIMD2<Float>
+}
+struct Uniforms {
+    var matrix: float4x4
+}
+struct Uniforms3D {
+    var view: float4x4
+    var world: float4x4
+    var eye: SIMD3<Float>
+}
+struct BlendVertice {
+    var position: SIMD3<Float>
+    var uv: SIMD2<Float>
+}
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+public struct Vertice {  // public version
+    public var position: Vec3
+    public var color: Color
+    public var uv: Point
+    public init(position: Vec3 = Vec3.zero, uv: Point = Point.zero, color: Color = Color.white) {
+        self.position = position
+        self.uv = uv
+        self.color = color
+    }
+    public static func trianglesFromQuad(_ v0: Vertice, _ v1: Vertice, _ v2: Vertice, _ v3: Vertice)
+        -> [Vertice]
+    {
         var ov = [Vertice]()
-        let c = (v0+v1+v2+v3)*0.25
+        let c = (v0 + v1 + v2 + v3) * 0.25
         ov.append(v0)
         ov.append(c)
         ov.append(v1)
@@ -1244,50 +1673,52 @@ public struct Vertice { // public version
         ov.append(v0)
         return ov
     }
-    var textureVertice : TextureVertice {
+    var textureVertice: TextureVertice {
         return TextureVertice(position: position.infloat3, uv: uv.infloat2, color: color.infloat4)
     }
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-public func ==(lhs:Vertice, rhs: Vertice) -> Bool {
-    return (lhs.color==rhs.color)&&(lhs.position==rhs.position)&&(lhs.uv==rhs.uv)
+public func == (lhs: Vertice, rhs: Vertice) -> Bool {
+    return (lhs.color == rhs.color) && (lhs.position == rhs.position) && (lhs.uv == rhs.uv)
 }
-public func !=(lhs:Vertice, rhs: Vertice) -> Bool {
+public func != (lhs: Vertice, rhs: Vertice) -> Bool {
     return (lhs.color != rhs.color) || (lhs.position != rhs.position) || (lhs.uv != rhs.uv)
 }
-public func +(lhs: Vertice, rhs: Vertice) -> Vertice {
-    return Vertice(position: lhs.position+rhs.position, uv: lhs.uv+rhs.uv, color: lhs.color+rhs.color)
+public func + (lhs: Vertice, rhs: Vertice) -> Vertice {
+    return Vertice(
+        position: lhs.position + rhs.position, uv: lhs.uv + rhs.uv, color: lhs.color + rhs.color)
 }
-public func -(lhs: Vertice, rhs: Vertice) -> Vertice {
-    return Vertice(position: lhs.position-rhs.position, uv: lhs.uv-rhs.uv, color: lhs.color-rhs.color)
+public func - (lhs: Vertice, rhs: Vertice) -> Vertice {
+    return Vertice(
+        position: lhs.position - rhs.position, uv: lhs.uv - rhs.uv, color: lhs.color - rhs.color)
 }
-public func *(lhs: Vertice, rhs: Double) -> Vertice {
-    return Vertice(position: lhs.position*rhs, uv: lhs.uv*rhs, color: lhs.color*rhs)
+public func * (lhs: Vertice, rhs: Double) -> Vertice {
+    return Vertice(position: lhs.position * rhs, uv: lhs.uv * rhs, color: lhs.color * rhs)
 }
-public func /(lhs: Vertice, rhs: Double) -> Vertice {
-    return Vertice(position: lhs.position/rhs, uv: lhs.uv/rhs, color: lhs.color/rhs)
+public func / (lhs: Vertice, rhs: Double) -> Vertice {
+    return Vertice(position: lhs.position / rhs, uv: lhs.uv / rhs, color: lhs.color / rhs)
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 public struct PointSprite {
-    public var position:Point
-    public var scale:Double
-    public var color:Color
-    public init(position:Point,scale:Double=1,color:Color=Color.white) {
-        self.position=position
-        self.scale=scale
-        self.color=color
+    public var position: Point
+    public var scale: Double
+    public var color: Color
+    public init(position: Point, scale: Double = 1, color: Color = Color.white) {
+        self.position = position
+        self.scale = scale
+        self.color = color
     }
 }
-public enum BlendMode : Int {
+public enum BlendMode: Int {
     case opaque = 0
     case copy
     case add
     case sub
-    case setAlpha   // keep rgb, replace alpha by source red channel
-    case mulAlpha   // keep rgb, mul alpha by source red channel
-    case color      // set color from mask
+    case setAlpha  // keep rgb, replace alpha by source red channel
+    case mulAlpha  // keep rgb, mul alpha by source red channel
+    case color  // set color from mask
     case lighten
     case darken
     case multiply
@@ -1313,9 +1744,9 @@ public enum BlendMode : Int {
     case phoenix
     case reflect
     case alpha = 0x10000
-    case mask = 0x20000    // ?? not sure if neeeded
-    public static var defaultModes : [BlendMode] {
-        return [ .opaque,.copy,.add,.sub,.alpha ]
+    case mask = 0x20000  // ?? not sure if neeeded
+    public static var defaultModes: [BlendMode] {
+        return [.opaque, .copy, .add, .sub, .alpha]
     }
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////

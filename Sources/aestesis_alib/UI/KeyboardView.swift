@@ -19,28 +19,29 @@
 
 import Foundation
 
-
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-public class KeyboardView : View {
+public class KeyboardView: View, @unchecked Sendable {
     let letters = "ABCDEFGHIJKLMNOPQRSTUVXYZ"
     var bletters = [Bitmap]()
-    public init(superview:View,layout:Layout,font:Font) {
+    public init(superview: View, layout: Layout, font: Font) {
         super.init(superview: superview, layout: layout)
-        for i  in 0..<letters.length {
-            let l = letters[i..<i+1]
-            font.bitmap(text: l, { b in
-                self.bletters.append(b)
-            })
+        for i in 0..<letters.length {
+            let l = letters[i..<i + 1]
+            font.bitmap(
+                text: l,
+                { b in
+                    self.bletters.append(b)
+                })
         }
     }
     override public func draw(to g: Graphics) {
         var x = 0.0
         let w = self.bounds.w / Double(bletters.count)
         for b in bletters {
-            g.draw(rect: b.bounds.translate(x:x,y:0),image:b)
+            g.draw(rect: b.bounds.translate(x: x, y: 0), image: b)
             x += w
         }
     }

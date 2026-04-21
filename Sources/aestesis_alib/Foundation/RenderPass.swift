@@ -16,23 +16,22 @@
 //  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
-
 import Foundation
-import Metal
+@preconcurrency import Metal
 import MetalKit
 import simd
 
 #if os(iOS)
-import UIKit
+    import UIKit
 #endif
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-public class RenderPass: NodeUI {
+public class RenderPass: NodeUI, @unchecked Sendable {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public enum Result {
-        case error(message:String)
+        case error(message: String)
         case discarded
         case success
     }
@@ -100,9 +99,10 @@ public class RenderPass: NodeUI {
     public func draw(trianglestrip n: Int) {
         command!.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: n)
     }
-    public func draw(triangle n: Int, index: Buffer, instanceCount:Int=1) {
+    public func draw(triangle n: Int, index: Buffer, instanceCount: Int = 1) {
         command!.drawIndexedPrimitives(
-            type: .triangle, indexCount: n, indexType: .uint32, indexBuffer: index.b, indexBufferOffset: 0, instanceCount: instanceCount
+            type: .triangle, indexCount: n, indexType: .uint32, indexBuffer: index.b,
+            indexBufferOffset: 0, instanceCount: instanceCount
         )
     }
     public func draw(line n: Int) {
@@ -134,8 +134,9 @@ public class RenderPass: NodeUI {
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    init(texture: Texture2D, clear: Color? = nil, depthClear: Double? = nil, storeDepth: Bool = false)
-    {
+    init(
+        texture: Texture2D, clear: Color? = nil, depthClear: Double? = nil, storeDepth: Bool = false
+    ) {
         cb = texture.viewport!.gpu.queue.makeCommandBuffer()!
         format = texture.format.program
         super.init(parent: texture.viewport!)
@@ -170,7 +171,8 @@ public class RenderPass: NodeUI {
         if let cm = command {
             cm.setViewport(
                 MTLViewport(
-                    originX: 0, originY: 0, width: texture.pixels.width, height: texture.pixels.height,
+                    originX: 0, originY: 0, width: texture.pixels.width,
+                    height: texture.pixels.height,
                     znear: 0, zfar: 1))
         }
         cb.addCompletedHandler({ (cb: MTLCommandBuffer) in
@@ -183,7 +185,8 @@ public class RenderPass: NodeUI {
                             "Texture rendering error, parent:\(p.className), error:\(cb.error!.localizedDescription)"
                         )
                     }
-                    self.onDone.dispatch(.error(message:cb.error!.localizedDescription.lowercased()))
+                    self.onDone.dispatch(
+                        .error(message: cb.error!.localizedDescription.lowercased()))
                 }
             } else {
                 if storeDepth {
@@ -195,7 +198,8 @@ public class RenderPass: NodeUI {
                     let cb = texture.viewport!.gpu.queue.makeCommandBuffer()
                     let blit = cb?.makeBlitCommandEncoder()
                     blit?.copy(
-                        from: src, sourceSlice: 0, sourceLevel: 0, sourceOrigin: MTLOriginMake(0, 0, 0),
+                        from: src, sourceSlice: 0, sourceLevel: 0,
+                        sourceOrigin: MTLOriginMake(0, 0, 0),
                         sourceSize: MTLSizeMake(w, h, 1), to: depth!, destinationOffset: 0,
                         destinationBytesPerRow: 4 * w, destinationBytesPerImage: 4 * w * h)
                     blit?.endEncoding()
@@ -235,18 +239,19 @@ public class RenderPass: NodeUI {
             descriptor.depthAttachment.loadAction = MTLLoadAction.clear
             descriptor.depthAttachment.storeAction = MTLStoreAction.dontCare
         }
-        
+
         let td = drawable.texture
         let vsize = Size(Double(td.width), Double(td.height))
-        
+
         size = viewport.size
         scale = vsize / viewport.size
-        
+
         command = cb.makeRenderCommandEncoder(descriptor: descriptor)
         if let cm = command {
             cm.setViewport(
                 MTLViewport(
-                    originX: 0, originY: 0, width: vsize.width, height: vsize.height, znear: 0, zfar: 1))
+                    originX: 0, originY: 0, width: vsize.width, height: vsize.height, znear: 0,
+                    zfar: 1))
         }
         super.init(parent: viewport)
         cb.addCompletedHandler({ (cb: MTLCommandBuffer) in
@@ -255,7 +260,7 @@ public class RenderPass: NodeUI {
                     self.onDone.dispatch(.discarded)
                 } else {
                     Debug.error("Viewport rendering error:\(cb.error!.localizedDescription)")
-                    self.onDone.dispatch(.error(message:cb.error!.localizedDescription))
+                    self.onDone.dispatch(.error(message: cb.error!.localizedDescription))
                 }
             } else {
                 self.onDone.dispatch(.success)
@@ -276,7 +281,7 @@ public class RenderPass: NodeUI {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-class Sampler: NodeUI {
+class Sampler: NodeUI, @unchecked Sendable {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     enum Mode {
@@ -325,7 +330,7 @@ class Sampler: NodeUI {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-public class DepthStencilState: NodeUI {
+public class DepthStencilState: NodeUI, @unchecked Sendable {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public enum Mode {
@@ -368,7 +373,7 @@ public class DepthStencilState: NodeUI {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-public class Program: NodeUI {
+public class Program: NodeUI, @unchecked Sendable {
     // TODO: MetaProgram using MTLRenderPipelineReflection
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -411,44 +416,71 @@ public class Program: NodeUI {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public init(
-        viewport: Viewport, vertex: String, fragment: String, floatShaders : Bool = false, blend: BlendMode,
+        viewport: Viewport, vertex: String, fragment: String, floatShaders: Bool = false,
+        blend: BlendMode,
         vertexFormat: [MTLVertexFormat], pixelFormat: Format = Format.bgra
     ) {
         super.init(parent: viewport)
-        initPipelineStates(library: viewport.gpu.library!, vertex: vertex, fragment: fragment, floatShaders: floatShaders, blend: blend, vdesc: Program.VertexDescriptor(vertexFormat), pixelFormat: pixelFormat)
+        initPipelineStates(
+            library: viewport.gpu.library!, vertex: vertex, fragment: fragment,
+            floatShaders: floatShaders, blend: blend, vdesc: Program.VertexDescriptor(vertexFormat),
+            pixelFormat: pixelFormat)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     init(
-        viewport: Viewport, vertex: String, fragment: String, floatShaders : Bool = false, blend: BlendMode,
+        viewport: Viewport, vertex: String, fragment: String, floatShaders: Bool = false,
+        blend: BlendMode,
         vdesc: MTLVertexDescriptor, pixelFormat: Format = Format.bgra
     ) {
         super.init(parent: viewport)
-        initPipelineStates(library: viewport.gpu.library!, vertex: vertex, fragment: fragment, floatShaders: floatShaders, blend: blend, vdesc: vdesc, pixelFormat: pixelFormat)
+        initPipelineStates(
+            library: viewport.gpu.library!, vertex: vertex, fragment: fragment,
+            floatShaders: floatShaders, blend: blend, vdesc: vdesc, pixelFormat: pixelFormat)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public init(
-        library: ProgramLibrary, vertex: String, fragment: String, floatShaders : Bool = false, blend: BlendMode,
+        library: ProgramLibrary, vertex: String, fragment: String, floatShaders: Bool = false,
+        blend: BlendMode,
         vertexFormat: [MTLVertexFormat], pixelFormat: Format = Format.bgra
     ) {
         super.init(parent: library)
-        initPipelineStates(library: library, vertex:vertex, fragment:fragment, floatShaders: floatShaders, blend:blend, vdesc: Program.VertexDescriptor(vertexFormat), pixelFormat: pixelFormat)
+        initPipelineStates(
+            library: library, vertex: vertex, fragment: fragment, floatShaders: floatShaders,
+            blend: blend, vdesc: Program.VertexDescriptor(vertexFormat), pixelFormat: pixelFormat)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    private func initPipelineStates(library:ProgramLibrary, vertex: String, fragment: String, floatShaders : Bool = false, blend: BlendMode,
-                                    vdesc: MTLVertexDescriptor, pixelFormat:Format) {
+    private func initPipelineStates(
+        library: ProgramLibrary, vertex: String, fragment: String, floatShaders: Bool = false,
+        blend: BlendMode,
+        vdesc: MTLVertexDescriptor, pixelFormat: Format
+    ) {
         switch pixelFormat {
         case .height:
-            rps[.height] = self.createPipelineState(library, vertex: vertex, fragment: fragment, blend: blend,vdesc: vdesc, format: .height)
+            rps[.height] = self.createPipelineState(
+                library, vertex: vertex, fragment: fragment, blend: blend, vdesc: vdesc,
+                format: .height)
         case .alpha, .bgra, .bgraDepth, .rgba16, .float, .float2:
-            let vertexFloat : String = floatShaders ? "\(vertex)_float" : vertex
-            let fragmentFloat : String = floatShaders ? "\(fragment)_float" : fragment
-            rps[.alpha] = self.createPipelineState(library, vertex: vertex, fragment: fragment, blend: blend,vdesc: vdesc, format: .alpha)
-            rps[.bgra] = self.createPipelineState(library, vertex: vertex, fragment: fragment, blend: blend,vdesc: vdesc, format: .bgra)
-            rps[.rgba16] = self.createPipelineState(library, vertex: vertex, fragment: fragment, blend: blend,vdesc: vdesc, format: .rgba16)
-            rps[.float] = self.createPipelineState(library, vertex: vertexFloat, fragment: fragmentFloat, blend: blend,vdesc: vdesc, format: .float)
-            rps[.float2] = self.createPipelineState(library, vertex: vertexFloat, fragment: fragmentFloat, blend: blend,vdesc: vdesc, format: .float2)
-            rps[.bgraDepth] = self.createPipelineState(library, vertex: vertex, fragment: fragment, blend: blend,vdesc: vdesc, format: .bgraDepth)
+            let vertexFloat: String = floatShaders ? "\(vertex)_float" : vertex
+            let fragmentFloat: String = floatShaders ? "\(fragment)_float" : fragment
+            rps[.alpha] = self.createPipelineState(
+                library, vertex: vertex, fragment: fragment, blend: blend, vdesc: vdesc,
+                format: .alpha)
+            rps[.bgra] = self.createPipelineState(
+                library, vertex: vertex, fragment: fragment, blend: blend, vdesc: vdesc,
+                format: .bgra)
+            rps[.rgba16] = self.createPipelineState(
+                library, vertex: vertex, fragment: fragment, blend: blend, vdesc: vdesc,
+                format: .rgba16)
+            rps[.float] = self.createPipelineState(
+                library, vertex: vertexFloat, fragment: fragmentFloat, blend: blend, vdesc: vdesc,
+                format: .float)
+            rps[.float2] = self.createPipelineState(
+                library, vertex: vertexFloat, fragment: fragmentFloat, blend: blend, vdesc: vdesc,
+                format: .float2)
+            rps[.bgraDepth] = self.createPipelineState(
+                library, vertex: vertex, fragment: fragment, blend: blend, vdesc: vdesc,
+                format: .bgraDepth)
         }
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -559,12 +591,14 @@ public class Program: NodeUI {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public static func populateDefaultBlendModes(
-        store: NodeUI, key: String, library: ProgramLibrary, vertex: String, fragment: String, floatShaders: Bool = false,
+        store: NodeUI, key: String, library: ProgramLibrary, vertex: String, fragment: String,
+        floatShaders: Bool = false,
         vertexFormat: [MTLVertexFormat], pixelFormat: Format = Format.bgra
     ) {
         for bm in BlendMode.defaultModes {
             store[Program.fullKey(key, blend: bm)] = Program(
-                library: library, vertex: vertex, fragment: fragment, floatShaders: floatShaders, blend: bm, vertexFormat: vertexFormat,
+                library: library, vertex: vertex, fragment: fragment, floatShaders: floatShaders,
+                blend: bm, vertexFormat: vertexFormat,
                 pixelFormat: pixelFormat)
         }
     }
@@ -591,7 +625,7 @@ public class Program: NodeUI {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-public class Buffer: NodeUI {
+public class Buffer: NodeUI, @unchecked Sendable {
     var b: MTLBuffer
     init(buffers: Buffers, size: Int) {
         b = buffers.viewport!.gpu.device!.makeBuffer(length: size, options: MTLResourceOptions())!
@@ -611,7 +645,7 @@ public class Buffer: NodeUI {
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-public class Buffers: NodeUI {
+public class Buffers: NodeUI, @unchecked Sendable {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     let lock = Lock()
     var bl = [Int: Set<Buffer>]()
@@ -633,11 +667,11 @@ public class Buffers: NodeUI {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public func get(_ size: Int, persistent: Bool = false) -> Buffer {
         let sz =
-        persistent
-        ? size
-        : (size < 16384
-           ? (size < 512 ? ((size / 32) + 1) * 32 : ((size / 1024) + 1) * 1024)
-           : (size / 32768 + 1) * 32768)
+            persistent
+            ? size
+            : (size < 16384
+                ? (size < 512 ? ((size / 32) + 1) * 32 : ((size / 1024) + 1) * 1024)
+                : (size / 32768 + 1) * 32768)
         var b: Buffer?
         lock.sync {
             if self.bl[sz] != nil {
@@ -656,12 +690,12 @@ public class Buffers: NodeUI {
     public func set(_ b: Buffer) {
         lock.sync {
             if self.bl[b.size] != nil {
-#if DEBUG
-                if self.bl[b.size]!.contains(b) {
-                    Debug.error("buffer already in pool", #file, #line)
-                    return
-                }
-#endif
+                #if DEBUG
+                    if self.bl[b.size]!.contains(b) {
+                        Debug.error("buffer already in pool", #file, #line)
+                        return
+                    }
+                #endif
                 self.bl[b.size]!.insert(b)
             } else {
                 self.bl[b.size] = Set<Buffer>()
@@ -675,7 +709,7 @@ public class Buffers: NodeUI {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-public class ProgramLibrary: NodeUI {
+public class ProgramLibrary: NodeUI, @unchecked Sendable {
     var lib: MTLLibrary?
     public init(parent: NodeUI, filename: String = "default") {
         super.init(parent: parent)
@@ -684,10 +718,11 @@ public class ProgramLibrary: NodeUI {
         let metalBundle = Bundle(path: metalBundlePath)!
         let libpath = metalBundle.path(forResource: filename, ofType: "metallib")!
         do {
-            lib = try viewport!.gpu.device!.makeLibrary(URL: Foundation.URL(string:libpath)!)
+            lib = try viewport!.gpu.device!.makeLibrary(URL: Foundation.URL(string: libpath)!)
         } catch {
             Debug.error(
-                "can't load metal library \(filename) in \(metalBundle.infoDictionary!["CFBundleName"]!)")
+                "can't load metal library \(filename) in \(metalBundle.infoDictionary!["CFBundleName"]!)"
+            )
         }
     }
 }

@@ -23,77 +23,78 @@ import Foundation
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-public class Effect : NodeUI {
+public class Effect: NodeUI, @unchecked Sendable {
     public var computing = false
-    public func process(source:Bitmap) -> Future {
-        let fut = Future(context:"process()")
-        fut.error(Error("not implemented",#file,#line))
+    public func process(source: Bitmap) -> Future {
+        let fut = Future(context: "process()")
+        fut.error(Error("not implemented", #file, #line))
         return fut
     }
-    public func process(source:Bitmap,destination:Bitmap) -> Future {
-        let fut = Future(context:"process()")
-        fut.error(Error("not implemented",#file,#line))
+    public func process(source: Bitmap, destination: Bitmap) -> Future {
+        let fut = Future(context: "process()")
+        fut.error(Error("not implemented", #file, #line))
         return fut
     }
-    static func globals(_ viewport:Viewport) {
+    static func globals(_ viewport: Viewport) {
     }
 }
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-public class GradientEffect : Effect {
-    var _gradient:Bitmap? = nil
-    public var color:Color
-    public var gradient : Bitmap {
+public class GradientEffect: Effect, @unchecked Sendable {
+    var _gradient: Bitmap? = nil
+    public var color: Color
+    public var gradient: Bitmap {
         get { return _gradient! }
         set(p) {
-            if let b=_gradient, p != b {
+            if let b = _gradient, p != b {
                 b.detach()
             }
             _gradient = p
         }
     }
     public override func process(source: Bitmap) -> Future {
-        let fut = Future(context:"process()")
+        let fut = Future(context: "process()")
         if self.attached {
-            let b = Bitmap(parent:source.viewport!,size:source.size)
-            process(source:source,destination:b).then { f in
+            let b = Bitmap(parent: source.viewport!, size: source.size)
+            process(source: source, destination: b).then { f in
                 if let b = f.result as? Bitmap {
                     fut.done(b)
                 } else if let e = f.result as? Error {
-                    fut.error(e,#file,#line)
+                    fut.error(e, #file, #line)
                     b.detach()
                 }
             }
         } else {
-            let _ = Atom.wait(0) { 
-                fut.error(Error("detached",#file,#line))
+            let _ = Atom.wait(0) {
+                fut.error(Error("detached", #file, #line))
             }
         }
         return fut
     }
-    public override func process(source:Bitmap, destination:Bitmap) -> Future {
-        let fut = Future(context:"process()")
+    public override func process(source: Bitmap, destination: Bitmap) -> Future {
+        let fut = Future(context: "process()")
         if self.attached {
             let b = destination
-            let g = Graphics(image:b)
-            g.program("program.gradient",blend:BlendMode.opaque)
+            let g = Graphics(image: b)
+            g.program("program.gradient", blend: BlendMode.opaque)
             g.uniforms(g.matrix)
-            let vert=g.textureVertices(4)
-            let strip=b.bounds.strip
-            let uv = Rect(x:0,y:0,w:1,h:1).strip
+            let vert = g.textureVertices(4)
+            let strip = b.bounds.strip
+            let uv = Rect(x: 0, y: 0, w: 1, h: 1).strip
             for i in 0...3 {
-                vert[i]=TextureVertice(position:strip[i].infloat3,uv:uv[i].infloat2,color:color.infloat4)
+                vert[i] = TextureVertice(
+                    position: strip[i].infloat3, uv: uv[i].infloat2, color: color.infloat4)
             }
             g.sampler("sampler.clamp")
-            g.render.use(texture:source)
-            g.render.use(texture:gradient,atIndex:1)
-            g.render.draw(trianglestrip:4)
+            g.render.use(texture: source)
+            g.render.use(texture: gradient, atIndex: 1)
+            g.render.draw(trianglestrip: 4)
             computing = true
             g.onDone { [weak self] ok in
-                guard let self=self, self.attached else {
-                    fut.error(Error("detached",#file,#line))
+                guard let self = self, self.attached else {
+                    fut.error(Error("detached", #file, #line))
                     return
                 }
                 self.computing = false
@@ -102,33 +103,33 @@ public class GradientEffect : Effect {
                     fut.done(b)
                     break
                 case .error(let message):
-                    Debug.error("GradientEffect, gpu error: \(message)",#file,#line)
-                    fut.error(Error("GPU problem",#file,#line))
+                    Debug.error("GradientEffect, gpu error: \(message)", #file, #line)
+                    fut.error(Error("GPU problem", #file, #line))
                     break
                 default:
-                    fut.error(Error("GPU problem",#file,#line))
+                    fut.error(Error("GPU problem", #file, #line))
                     break
                 }
             }
         } else {
-            Debug.error("GradientEffect, detached",#file,#line)
+            Debug.error("GradientEffect, detached", #file, #line)
             let _ = Atom.wait(0) {
-                fut.error(Error("detached",#file,#line))
+                fut.error(Error("detached", #file, #line))
             }
         }
         return fut
     }
-    public init(parent:NodeUI,gradient:Bitmap?=nil,color:Color = .white) {
+    public init(parent: NodeUI, gradient: Bitmap? = nil, color: Color = .white) {
         self.color = color
-        super.init(parent:parent)
+        super.init(parent: parent)
         self._gradient = gradient
     }
-    public init(parent:NodeUI,gradient:ColorGradient,color:Color = .white) {
+    public init(parent: NodeUI, gradient: ColorGradient, color: Color = .white) {
         self.color = color
-        super.init(parent:parent)
+        super.init(parent: parent)
         self.gradient = gradient.createBitmap(parent: self, width: 16)
     }
-    public func set(gradient:ColorGradient,pixels:Double = 16) {
+    public func set(gradient: ColorGradient, pixels: Double = 16) {
         self.gradient = gradient.createBitmap(parent: self, width: pixels)
     }
     override public func detach() {

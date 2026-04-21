@@ -19,9 +19,9 @@
 
 import Foundation
 
-public class TextView : View {
-    var bitmap:Bitmap?
-    public var text:String {
+public class TextView: View, @unchecked Sendable {
+    var bitmap: Bitmap?
+    public var text: String {
         didSet(t) {
             if text != t {
                 if let b = self.bitmap {
@@ -31,7 +31,7 @@ public class TextView : View {
             }
         }
     }
-    public var font:String {
+    public var font: String {
         didSet(f) {
             if font != f {
                 if let b = self.bitmap {
@@ -41,7 +41,7 @@ public class TextView : View {
             }
         }
     }
-    public var align:Align {
+    public var align: Align {
         didSet(a) {
             if align != a {
                 if let b = self.bitmap {
@@ -51,7 +51,7 @@ public class TextView : View {
             }
         }
     }
-    public var fontSize:Double {
+    public var fontSize: Double {
         didSet(fs) {
             if fontSize != fs {
                 if let b = self.bitmap {
@@ -75,66 +75,73 @@ public class TextView : View {
             super.size = sz.ceil
         }
     }
-    public init(superview:View,layout:Layout?=nil,text:String="",align:Align=Align.topLeft,font:String="font.regular",fontSize:Double=0.8,color:Color=Color.white) {
+    public init(
+        superview: View, layout: Layout? = nil, text: String = "", align: Align = Align.topLeft,
+        font: String = "font.regular", fontSize: Double = 0.8, color: Color = Color.white
+    ) {
         self.text = text
         self.font = font
         self.align = align
         self.fontSize = fontSize
         if let l = layout {
-            super.init(superview:superview,layout:l)
+            super.init(superview: superview, layout: l)
         } else {
-            super.init(superview:superview)
+            super.init(superview: superview)
         }
         self.color = color
     }
-    var rendering = false;
+    var rendering = false
     override public func draw(to g: Graphics) {
         if self.bitmap == nil, !rendering, let font = self[font] as? Font {
-            rendering = true;
+            rendering = true
             self.bg {
-                var f:Font?
+                var f: Font?
                 if self.fontSize == 0 {
-                    f = Font(font:font,size:font.size)
+                    f = Font(font: font, size: font.size)
                 } else if self.fontSize <= 1 {
-                    f = Font(font:font,size:self.size.height*self.fontSize)
+                    f = Font(font: font, size: self.size.height * self.fontSize)
                 } else {
-                    f = Font(font:font,size:self.fontSize)
+                    f = Font(font: font, size: self.fontSize)
                 }
-                self.bitmap = f!.mask(text:self.text,align:self.align,width:self.size.width,lines:1)
-                self.rendering = false;
+                self.bitmap = f!.mask(
+                    text: self.text, align: self.align, width: self.size.width, lines: 1)
+                self.rendering = false
             }
         }
         if let b = self.bitmap {
-            let r = b.bounds.aligned(in:self.bounds,align:align)
+            let r = b.bounds.aligned(in: self.bounds, align: align)
             //g.fill(rect:r,color:.aeBlue)    // 4debug
-            g.draw(rect:r,image:b,blend:.color,color:self.computedColor)
+            g.draw(rect: r, image: b, blend: .color, color: self.computedColor)
         }
     }
 }
 
-public class FlexTextView : View {
-    var fontSize:Double
-    var font:String
-    var text:String
-    var bitmap:Bitmap?=nil
-    var maxLines:Int = 0
-    public init(superview:View,layout:Layout,text:String,font:String="font.regular",fontSize:Double=0,maxLines:Int=0) {
+public class FlexTextView: View, @unchecked Sendable {
+    var fontSize: Double
+    var font: String
+    var text: String
+    var bitmap: Bitmap? = nil
+    var maxLines: Int = 0
+    public init(
+        superview: View, layout: Layout, text: String, font: String = "font.regular",
+        fontSize: Double = 0, maxLines: Int = 0
+    ) {
         self.fontSize = fontSize
         self.font = font
         self.text = text
         self.maxLines = maxLines
-        super.init(superview:superview,layout:layout)
+        super.init(superview: superview, layout: layout)
         self.onResize.alive(self) { sz in
             if let b = self.bitmap {
                 if b.size != sz {
                     b.detach()
-                    self.bitmap=nil
+                    self.bitmap = nil
                 }
             }
         }
     }
     override public func detach() {
-        if let b=self.bitmap {
+        if let b = self.bitmap {
             b.detach()
             self.bitmap = nil
         }
@@ -146,11 +153,11 @@ public class FlexTextView : View {
         }
         set(sz) {
             if let f = self[font] as? Font {
-                if fontSize>0 {
-                    let f0 = Font(font:f,size:fontSize)
-                    super.size = f0.bounds(text,width:sz.width,lines:self.maxLines).size.ceil
+                if fontSize > 0 {
+                    let f0 = Font(font: f, size: fontSize)
+                    super.size = f0.bounds(text, width: sz.width, lines: self.maxLines).size.ceil
                 } else {
-                    super.size = f.bounds(text,width:sz.width,lines:self.maxLines).size.ceil
+                    super.size = f.bounds(text, width: sz.width, lines: self.maxLines).size.ceil
                 }
             } else {
                 super.size = sz.ceil
@@ -159,17 +166,16 @@ public class FlexTextView : View {
     }
     override public func draw(to g: Graphics) {
         if bitmap == nil, let f = self[font] as? Font {
-            if fontSize>0 {
-                let f0 = Font(font:f,size:fontSize)
-                self.bitmap = f0.mask(text:text,width:self.size.width,lines:self.maxLines)
+            if fontSize > 0 {
+                let f0 = Font(font: f, size: fontSize)
+                self.bitmap = f0.mask(text: text, width: self.size.width, lines: self.maxLines)
             } else {
-                self.bitmap = f.mask(text:text,width:self.size.width,lines:self.maxLines)
+                self.bitmap = f.mask(text: text, width: self.size.width, lines: self.maxLines)
             }
         }
         if let b = self.bitmap {
-            g.draw(rect:b.bounds,image:b,blend:.color,color:color)
+            g.draw(rect: b.bounds, image: b, blend: .color, color: color)
         }
     }
-    
-}
 
+}

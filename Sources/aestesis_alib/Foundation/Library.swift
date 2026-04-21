@@ -23,42 +23,42 @@ import SystemConfiguration
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-public class Library : NodeUI {
+public class Library: NodeUI, @unchecked Sendable {
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public var keepCount:Int = 100
-    public var tryMax:Int = 5
+    public var keepCount: Int = 100
+    public var tryMax: Int = 5
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    var servers:[String]
-    var server:String {
+    var servers: [String]
+    var server: String {
         if servers.count == 1 {
             return servers[0]
         }
-        return servers[Int(floor(ß.rnd*Double(servers.count)*0.99999))]
+        return servers[Int(floor(ß.rnd * Double(servers.count) * 0.99999))]
     }
-    var images = [String:Image]()
-    var urls=Set<String>()
-    var downloads=Set<Future>()
-    var release=false
-    let lock=Lock() 
+    var images = [String: Image]()
+    var urls = Set<String>()
+    var downloads = Set<Future>()
+    var release = false
+    let lock = Lock()
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func bitmap(_ url:String) -> Bitmap? {
-        var b:Bitmap?=nil
+    public func bitmap(_ url: String) -> Bitmap? {
+        var b: Bitmap? = nil
         lock.sync {
-            if let i=self.images[url] {
-                b=i.bitmap
+            if let i = self.images[url] {
+                b = i.bitmap
             } else {
-                self.images[url]=Image(library:self,url:url)
+                self.images[url] = Image(library: self, url: url)
             }
         }
         return b
     }
-    func download(_ url:String) -> Future {
-        let fut=Future(context:"download")
-        fut["url"]=url
-        lock.sync { 
+    func download(_ url: String) -> Future {
+        let fut = Future(context: "download")
+        fut["url"] = url
+        lock.sync {
             if !self.urls.contains(url) {
                 self.urls.insert(url)
             }
@@ -74,10 +74,10 @@ public class Library : NodeUI {
             while !self.release {
                 self.lock.sync {
                     if self.images.count > self.keepCount {
-                        let l=self.images
-                        let a=self.images.values
-                        let b=a.sorted(by: { (a, b) -> Bool in
-                            return a.lastAccess>b.lastAccess
+                        let l = self.images
+                        let a = self.images.values
+                        let b = a.sorted(by: { (a, b) -> Bool in
+                            return a.lastAccess > b.lastAccess
                         })
                         for i in self.keepCount..<l.count {
                             self.images.removeValue(forKey: b[i].url)
@@ -90,19 +90,20 @@ public class Library : NodeUI {
         }
         // downloader //
         let _ = Thread {
-            var insrv=true
-            var insrvtime = ß.time+3    // wait first timeout to really start, let time for the app to initialize
-            while !self.release {       // TODO: remove download timeout, cleanly
-                if !insrv && self.urls.count>0 {
-                    let fm=FileManager.default
-                    insrv=true
+            var insrv = true
+            var insrvtime = ß.time + 3  // wait first timeout to really start, let time for the app to initialize
+            while !self.release {  // TODO: remove download timeout, cleanly
+                if !insrv && self.urls.count > 0 {
+                    let fm = FileManager.default
+                    insrv = true
                     insrvtime = ß.time + 3
-                    let url:String=self.urls.first!
-                    let filename=Application.localPath("library/"+url)
-                    let dir=NSString(string:filename).deletingLastPathComponent
+                    let url: String = self.urls.first!
+                    let filename = Application.localPath("library/" + url)
+                    let dir = NSString(string: filename).deletingLastPathComponent
                     if !fm.fileExists(atPath: dir) {
                         do {
-                            try fm.createDirectory(atPath: dir, withIntermediateDirectories: true, attributes: nil)
+                            try fm.createDirectory(
+                                atPath: dir, withIntermediateDirectories: true, attributes: nil)
                         } catch {
                             Debug.error("error, Library.DownloadManager()")
                         }
@@ -110,18 +111,18 @@ public class Library : NodeUI {
                     if fm.fileExists(atPath: filename) {
                         Debug.error("error, Library.DownloadManager()")
                     }
-                    var ntries=0
-                    var next:((Future)->())?=nil
-                    next={ f in
-                        if let res=f.result as? Response {
+                    var ntries = 0
+                    var next: ((Future) -> Void)? = nil
+                    next = { f in
+                        if let res = f.result as? Response {
                             res.onClose.once {
-                                insrv=false
-                                self.lock.sync{
+                                insrv = false
+                                self.lock.sync {
                                     if self.urls.contains(url) {
                                         self.urls.remove(url)
-                                        let d=self.downloads
+                                        let d = self.downloads
                                         for f in d {
-                                            if (f["url"] as! String)==url {
+                                            if (f["url"] as! String) == url {
                                                 self.downloads.remove(f)
                                                 self.bg {
                                                     f.done()
@@ -131,34 +132,39 @@ public class Library : NodeUI {
                                     }
                                 }
                             }
-                            let writer=FileWriter(filename:filename,error: { err in
-                                Debug.error(Error(err,#file,#line))
-                            })
+                            let writer = FileWriter(
+                                filename: filename,
+                                error: { err in
+                                    Debug.error(Error(err, #file, #line))
+                                })
                             res.pipe(to: writer)
                         } else {
                             Debug.error("error downloading asset \(url)  #try: \(ntries)")
-                            if ntries<self.tryMax {
+                            if ntries < self.tryMax {
                                 Thread.sleep(0.1)
-                                let _ = Request(url:"\(self.server)\(url)").then(next!)
+                                let _ = Request(url: "\(self.server)\(url)").then(next!)
                                 ntries += 1
                             } else {
                                 Debug.error("too many tries, aborting.. \(url)")
-                                insrv=false
-                                self.lock.sync{
+                                insrv = false
+                                self.lock.sync {
                                     self.urls.remove(url)
-                                    let d=self.downloads
+                                    let d = self.downloads
                                     for f in d {
-                                        if (f["url"] as! String)==url {
+                                        if (f["url"] as! String) == url {
                                             self.downloads.remove(f)
-                                            f.error(Error("too manies tries Library.download(\(url))",#file,#line))
+                                            f.error(
+                                                Error(
+                                                    "too manies tries Library.download(\(url))",
+                                                    #file, #line))
                                         }
                                     }
                                 }
                             }
                         }
                     }
-                    Request(url:"\(self.server)\(url)").then(next!)
-                } else if insrv && insrvtime<ß.time {
+                    Request(url: "\(self.server)\(url)").then(next!)
+                } else if insrv && insrvtime < ß.time {
                     insrv = false
                 }
                 Thread.sleep(0.1)
@@ -167,19 +173,19 @@ public class Library : NodeUI {
     }
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public init(parent:NodeUI,server:String) {
-        self.servers=[server]
-        super.init(parent:parent)
+    public init(parent: NodeUI, server: String) {
+        self.servers = [server]
+        super.init(parent: parent)
         run()
     }
-    public init(parent:NodeUI,servers:[String]) {
-        self.servers=servers
-        super.init(parent:parent)
+    public init(parent: NodeUI, servers: [String]) {
+        self.servers = servers
+        super.init(parent: parent)
         run()
     }
     public override func detach() {
-        release=true
-        keepCount=0
+        release = true
+        keepCount = 0
         self.lock.sync {
             for b in self.images.values {
                 b.detach()
@@ -191,31 +197,31 @@ public class Library : NodeUI {
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    class Image : NodeUI {
-        let url:String
-        var bitmap:Bitmap?=nil
-        var lastAccess=ß.time
-        func load(_ path:String) {
-            bitmap=Bitmap(parent:self,path:path)
-            lastAccess=ß.time
+    class Image: NodeUI, @unchecked Sendable {
+        let url: String
+        var bitmap: Bitmap? = nil
+        var lastAccess = ß.time
+        func load(_ path: String) {
+            bitmap = Bitmap(parent: self, path: path)
+            lastAccess = ß.time
         }
         override func detach() {
-            if let b=bitmap {
+            if let b = bitmap {
                 b.detach()
-                bitmap=nil
+                bitmap = nil
             }
             super.detach()
         }
-        init(library:Library,url:String) {
-            self.url=url
-            super.init(parent:library)
-            let path=Application.localPath("library/\(url)")
+        init(library: Library, url: String) {
+            self.url = url
+            super.init(parent: library)
+            let path = Application.localPath("library/\(url)")
             if Application.fileExists(path) {
                 load(path)
             } else {
                 library.download(url).then { fut in
                     if let err = fut.result as? Error {
-                        Debug.error(err,#file,#line)
+                        Debug.error(err, #file, #line)
                     } else {
                         self.load(path)
                     }
@@ -229,7 +235,7 @@ public class Library : NodeUI {
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-public class CheckNet : Atom {
+public class CheckNet: Atom, @unchecked Sendable {
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     public enum API {
@@ -243,27 +249,27 @@ public class CheckNet : Atom {
     }
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public let onUpdate=Event<State>()
-    public let onChanged=Event<State>()
-    public let onConnected=Event<Void>()
-    public let onDisconnected=Event<Void>()
-    public private(set) var state=State.unknown
-    public private(set) var lastDispatch=State.unknown
+    public let onUpdate = Event<State>()
+    public let onChanged = Event<State>()
+    public let onConnected = Event<Void>()
+    public let onDisconnected = Event<Void>()
+    public private(set) var state = State.unknown
+    public private(set) var lastDispatch = State.unknown
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    let url:String
-    var release=false
-    var count:Int=0
+    let url: String
+    var release = false
+    var count: Int = 0
     let queue = DispatchQueue(label: "checkNet.\(ß.alphaID)")
-    let timer:DispatchSourceTimer
+    let timer: DispatchSourceTimer
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public init(url:String="http://google.com/",api:API = .reachability) {  // add API NWPathMonitor   https://medium.com/@rwbutler/nwpathmonitor-the-new-reachability-de101a5a8835
-        self.url=url
-        self.timer = DispatchSource.makeTimerSource(queue:queue)
+    public init(url: String = "http://google.com/", api: API = .reachability) {  // add API NWPathMonitor   https://medium.com/@rwbutler/nwpathmonitor-the-new-reachability-de101a5a8835
+        self.url = url
+        self.timer = DispatchSource.makeTimerSource(queue: queue)
         super.init()
-        self.timer.schedule(deadline:.now(),repeating:.seconds(1))
-        var req:Request?
+        self.timer.schedule(deadline: .now(), repeating: .seconds(1))
+        var req: Request?
         self.timer.setEventHandler {
             switch api {
             case .request:
@@ -274,7 +280,7 @@ public class CheckNet : Atom {
                 } else {
                     req = Request(url: url)
                     req!.then { fut in
-                        if let _ = fut.result as? Error {
+                        if fut.result as? Error != nil {
                             self.set(.disconnected)
                         } else {
                             self.set(.connected)
@@ -286,10 +292,12 @@ public class CheckNet : Atom {
             case .reachability:
                 let host = URL(string: url)!.host!
                 let r = SCNetworkReachabilityCreateWithName(nil, host)
-                if let r=r {
+                if let r = r {
                     var flags = SCNetworkReachabilityFlags()
-                    SCNetworkReachabilityGetFlags(r,&flags)
-                    if flags.rawValue & SCNetworkReachabilityFlags.reachable.rawValue == SCNetworkReachabilityFlags.reachable.rawValue {
+                    SCNetworkReachabilityGetFlags(r, &flags)
+                    if flags.rawValue & SCNetworkReachabilityFlags.reachable.rawValue
+                        == SCNetworkReachabilityFlags.reachable.rawValue
+                    {
                         self.set(.connected)
                     } else {
                         self.set(.disconnected)
@@ -307,7 +315,7 @@ public class CheckNet : Atom {
     }
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    func set(_ st:State) {
+    func set(_ st: State) {
         onUpdate.dispatch(st)
         let dispatch = {
             if self.lastDispatch != self.state {
@@ -334,21 +342,21 @@ public class CheckNet : Atom {
             }
         }
     }
-    public static func publicIP(_ fn:@escaping (String?)->()) {
-        Request(url:"http://checkip.dyndns.org/").then { fut in
-            if let res=fut.result as? Response {
-                res.onClose.once { 
-                    if let text=res.readAll() {
+    public static func publicIP(_ fn: @escaping (String?) -> Void) {
+        Request(url: "http://checkip.dyndns.org/").then { fut in
+            if let res = fut.result as? Response {
+                res.onClose.once {
+                    if let text = res.readAll() {
                         if let first = text.indexOf("Address: ") {
                             if let last = text.indexOf("</body>") {
-                                fn(text[first+9..<last])
+                                fn(text[first + 9..<last])
                             } else {
                                 fn(nil)
                             }
                         }
                     }
                 }
-            } else if let err=fut.result as? Error {
+            } else if let err = fut.result as? Error {
                 Debug.error(err)
                 fn(nil)
             }
@@ -356,9 +364,9 @@ public class CheckNet : Atom {
     }
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public typealias ExecuteFunction = (@escaping (Bool)->())->()
-    public func execute(count:Int = 1, fn:@escaping ExecuteFunction) {
-        if count>3 {
+    public typealias ExecuteFunction = (@escaping (Bool) -> Void) -> Void
+    public func execute(count: Int = 1, fn: @escaping ExecuteFunction) {
+        if count > 3 {
             Debug.warning("ChecNet.execute() error, max tries reatched: \(count)")
         }
         if self.state == .connected {
@@ -366,16 +374,16 @@ public class CheckNet : Atom {
                 if !ok {
                     if self.state == .disconnected {
                         self.onConnected.once {
-                            self.execute(count:count+1,fn:fn)
+                            self.execute(count: count + 1, fn: fn)
                         }
                     } else {
-                        self.execute(count:count+1,fn:fn)
+                        self.execute(count: count + 1, fn: fn)
                     }
                 }
             }
         } else {
             self.onConnected.once {
-                self.execute(count:count,fn:fn)
+                self.execute(count: count, fn: fn)
             }
         }
     }
@@ -385,6 +393,3 @@ public class CheckNet : Atom {
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-

@@ -19,33 +19,38 @@
 
 import Foundation
 
-public class StackView : View {
-    public let direction:Direction
-    public init(superview:View,direction:Direction) {  //
+public class StackView: View, @unchecked Sendable {
+    public let direction: Direction
+    public init(superview: View, direction: Direction) {  //
         self.direction = direction
-        super.init(superview:superview)
+        super.init(superview: superview)
         superview.onResize.alive(self) { sz in
             self.size = self.unitSize * (sz / Size(self.grid.size)).ceil
         }
     }
     override public func arrange() {
-        let csz = self.ceilSize;
+        let csz = self.ceilSize
         self.size = (self.unitSize * csz).ceil
-        let m = grid.marginAbs+grid.marginFloat*csz
-        let c = (superview!.size-Size(grid.spaces)*m)/Size(grid.size)
+        let m = grid.marginAbs + grid.marginFloat * csz
+        let c = (superview!.size - Size(grid.spaces) * m) / Size(grid.size)
         let d = direction.point
         var p = Point.zero
         for v in subviews {
-            if let l=v.layout {
+            if let l = v.layout {
                 if l.align != Align.none {
-                    let lp=l.placement
-                    var f = Rect (x:m.w + lp.x * (m.w + c.w) + l.marginLeft, y:m.h + lp.y * (m.h + c.h) + l.marginTop, w:lp.w * c.w + (lp.w - 1) * m.w - (l.marginLeft + l.marginRight), h:lp.h * c.h + (lp.h - 1) * m.h - (l.marginTop + l.marginBottom)).ceil;
+                    let lp = l.placement
+                    var f = Rect(
+                        x: m.w + lp.x * (m.w + c.w) + l.marginLeft,
+                        y: m.h + lp.y * (m.h + c.h) + l.marginTop,
+                        w: lp.w * c.w + (lp.w - 1) * m.w - (l.marginLeft + l.marginRight),
+                        h: lp.h * c.h + (lp.h - 1) * m.h - (l.marginTop + l.marginBottom)
+                    ).ceil
                     // TODO: calc f using other Grid.Disposition
                     if l.align.hasFlag(.fill) && l.aspect > 0 {
                         if l.aspect > f.size.ratio {
-                            let o=f.height
+                            let o = f.height
                             f.height = f.width / l.aspect
-                            f.y = f.y + ( o - f.height) * 0.5
+                            f.y = f.y + (o - f.height) * 0.5
                         }
                     }
                     if !l.align.hasFlag(.fillHeight) {
@@ -68,14 +73,14 @@ public class StackView : View {
             }
         }
     }
-    public var ceilSize : Size {
+    public var ceilSize: Size {
         if let superview = superview {
             return (superview.size / Size(self.grid.size)).ceil
         } else {
             return .zero
         }
     }
-    public var unitSize : Size {
+    public var unitSize: Size {
         var n = 0.0
         switch direction {
         case .horizontal:
@@ -86,7 +91,7 @@ public class StackView : View {
                     n += 1
                 }
             }
-            return Size(n,1)
+            return Size(n, 1)
         case .vertical:
             for v in subviews {
                 if let l = v.layout {
@@ -95,7 +100,7 @@ public class StackView : View {
                     n += 1
                 }
             }
-            return Size(1,n)
+            return Size(1, n)
         }
     }
 }

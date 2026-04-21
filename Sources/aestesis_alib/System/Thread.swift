@@ -208,7 +208,9 @@ public class SynchronizedArray<T: Sendable>: @unchecked Sendable {
     }
 }
 
-public class SynchronizedDictionnary<TK: Hashable, TV>: Collection, @unchecked Sendable {
+public class SynchronizedDictionnary<TK, TV: Sendable>: Collection,
+    @unchecked Sendable where TK : Sendable & Hashable
+{
     private let accessQueue: DispatchQueue = DispatchQueue(
         label: "SynchronizedDictionaryAccess", qos: .userInteractive, attributes: .concurrent)
     private var dictionary: [TK: TV]
@@ -250,7 +252,9 @@ public class SynchronizedDictionnary<TK: Hashable, TV>: Collection, @unchecked S
             self?.dictionary.removeValue(forKey: forKey)
         }
     }
-    public subscript(index: Dictionary<TK, TV>.Index) -> Dictionary<TK, TV>.Element {
+    public subscript(index: Dictionary<TK, TV>.Index)
+        -> Dictionary<TK, TV>.Element
+    {
         self.accessQueue.sync {
             return self.dictionary[index]
         }
@@ -307,7 +311,9 @@ public class SynchronizedDictionnary<TK: Hashable, TV>: Collection, @unchecked S
 
     // this is because it is an apple protocol method
     // swiftlint:disable identifier_name
-    public func index(after i: Dictionary<TK, TV>.Index) -> Dictionary<TK, TV>.Index {
+    public func index(after i: Dictionary<TK, TV>.Index)
+        -> Dictionary<TK, TV>.Index
+    {
         self.accessQueue.sync {
             return self.dictionary.index(after: i)
         }

@@ -17,8 +17,8 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-import Foundation
 import Darwin
+import Foundation
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -28,25 +28,25 @@ public protocol StreamControl {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-public class Stream<T> : Atom {
-    public let onOpen=Event<Void>()
-    public let onData=Event<Void>()
-    public let onFreespace=Event<Void>()
-    public let onClose=Event<Void>()
-    public let onError=Event<Error>()
-    public private(set) var timeout:Double=5
-    var pipes = [Stream : (data:Action<Void>,free:Action<Void>,error:Action<Error>)]()
-    public var available:Int {
+public class Stream<T>: Atom, @unchecked Sendable {
+    public let onOpen = Event<Void>()
+    public let onData = Event<Void>()
+    public let onFreespace = Event<Void>()
+    public let onClose = Event<Void>()
+    public let onError = Event<Error>()
+    public private(set) var timeout: Double = 5
+    var pipes = [Stream: (data: Action<Void>, free: Action<Void>, error: Action<Error>)]()
+    public var available: Int {
         Debug.notImplemented()
         return 0
     }
-    public var free:Int {
+    public var free: Int {
         return Int.max
     }
-    public var availableControl:Int {
+    public var availableControl: Int {
         return 0
     }
-    public var freeControl:Int {
+    public var freeControl: Int {
         return Int.max
     }
     public func close() {
@@ -63,28 +63,28 @@ public class Stream<T> : Atom {
         onError.removeAll()
     }
     public func flush() {
-        if available>0 {
+        if available > 0 {
             onData.dispatch(())
         }
     }
-    public func pipe(to:Stream,pipeError:Bool=false) {
+    public func pipe(to: Stream, pipeError: Bool = false) {
         //var todo = [UInt8]();
         let update = {
-            let mb=min(to.free,self.available)
+            let mb = min(to.free, self.available)
             if mb > 0 {
-                let b=self.read(mb)
-                    let w = to.write(b,offset:0,count:b.count)
-                    if w != b.count {
-                        Debug.error(Error("write \(w)/\(b.count)",#file,#line))
-                    }
-                
+                let b = self.read(mb)
+                let w = to.write(b, offset: 0, count: b.count)
+                if w != b.count {
+                    Debug.error(Error("write \(w)/\(b.count)", #file, #line))
+                }
+
             }
-            let mc=min(to.freeControl,self.availableControl)
+            let mc = min(to.freeControl, self.availableControl)
             if mc > 0 {
-                if let b=self.readControl(mc) {
+                if let b = self.readControl(mc) {
                     let w = to.writeControl(b, offset: 0, count: b.count)
                     if w != b.count {
-                        Debug.error(Error("write \(w)/\(b.count)",#file,#line))
+                        Debug.error(Error("write \(w)/\(b.count)", #file, #line))
                     }
                 }
             }
@@ -93,50 +93,59 @@ public class Stream<T> : Atom {
             let error = { error in
                 to.onError.dispatch(error)
             }
-            pipes[to]=(data:onData.always(update),free:to.onFreespace.always(update),error:onError.always(error))
+            pipes[to] = (
+                data: onData.always(update), free: to.onFreespace.always(update),
+                error: onError.always(error)
+            )
         } else {
-            let error : (Error)->() = { error in
+            let error: (Error) -> Void = { error in
                 // no piping...
             }
-            pipes[to]=(data:onData.always(update),free:to.onFreespace.always(update),error:onError.always(error))
+            pipes[to] = (
+                data: onData.always(update), free: to.onFreespace.always(update),
+                error: onError.always(error)
+            )
         }
-        if available>0 {
+        if available > 0 {
             self.onData.dispatch(())
         }
     }
-    public func unpipe(_ to:Stream) {
+    public func unpipe(_ to: Stream) {
         if let p = pipes[to] {
             self.onData.remove(p.data)
             to.onFreespace.remove(p.free)
             self.onError.remove(p.error)
-            pipes[to]=nil
+            pipes[to] = nil
         }
     }
-    public func read(_ desired:Int) -> [T] {
+    public func read(_ desired: Int) -> [T] {
         Debug.notImplemented()
         return []
     }
-    public func write(_ data:[T],offset:Int,count:Int) -> Int {
+    public func write(_ data: [T], offset: Int, count: Int) -> Int {
         Debug.notImplemented()
         return 0
     }
-    public func readControl(_ desired:Int) -> [StreamControl]? {
+    public func readControl(_ desired: Int) -> [StreamControl]? {
         Debug.notImplemented()
         return nil
     }
-    public func writeControl(_ data:[StreamControl],offset:Int,count:Int) -> Int {
+    public func writeControl(_ data: [StreamControl], offset: Int, count: Int) -> Int {
         Debug.notImplemented()
         return 0
     }
-    init(timeout:Double=5,data:(()->())?=nil,free:(()->())?=nil,error:((Error)->())?=nil) {
-        self.timeout=timeout
-        if let d=data {
+    init(
+        timeout: Double = 5, data: (() -> Void)? = nil, free: (() -> Void)? = nil,
+        error: ((Error) -> Void)? = nil
+    ) {
+        self.timeout = timeout
+        if let d = data {
             let _ = onData.always(d)
         }
-        if let f=free {
+        if let f = free {
             let _ = onFreespace.always(f)
         }
-        if let e=error {
+        if let e = error {
             let _ = onError.always(e)
         }
         super.init()
@@ -145,68 +154,70 @@ public class Stream<T> : Atom {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-public class CircularStream<T> : Stream<T> {
-    private let lock=Lock()
-    private let zero:T
-    var buffer:[T]
-    var ro:Int=0
-    var wo:Int=0
-    public override var available:Int {
-        return (ro<=wo) ? (wo-ro) : (buffer.count-(ro-wo))
+public class CircularStream<T>: Stream<T>, @unchecked Sendable {
+    private let lock = Lock()
+    private let zero: T
+    var buffer: [T]
+    var ro: Int = 0
+    var wo: Int = 0
+    public override var available: Int {
+        return (ro <= wo) ? (wo - ro) : (buffer.count - (ro - wo))
     }
-    public override var free:Int {
+    public override var free: Int {
         return buffer.count - available
     }
-    public override func write(_ data:[T],offset o:Int,count c:Int) -> Int {
-        var ret:Int=0
+    public override func write(_ data: [T], offset o: Int, count c: Int) -> Int {
+        var ret: Int = 0
         lock.sync {
-            var offset=o
-            var count=c
+            var offset = o
+            var count = c
             if self.free < count {
                 let max = ß.time + self.timeout
-                while self.free<count && ß.time<max {
+                while self.free < count && ß.time < max {
                     Thread.sleep(0.01)
                 }
             }
-            if self.free<count {
-                ret=0
+            if self.free < count {
+                ret = 0
                 return
             }
             while true {
-                let n=min(self.buffer.count-self.wo, count)
-                if n<=0 {
+                let n = min(self.buffer.count - self.wo, count)
+                if n <= 0 {
                     break
                 }
-                self.buffer.replaceSubrange(self.wo..<self.wo+n, with: data[offset..<offset+n])
+                self.buffer.replaceSubrange(self.wo..<self.wo + n, with: data[offset..<offset + n])
                 offset += n
                 count -= n
                 self.wo = (self.wo + n) % self.buffer.count
             }
-            ret = c-count
+            ret = c - count
         }
         self.onData.dispatch(())
         return ret
     }
-    public override func read(_ desired:Int) -> [T] {
+    public override func read(_ desired: Int) -> [T] {
         if available == 0 {
-            let max=ß.time+timeout
-            while available==0 && ß.time<max {
+            let max = ß.time + timeout
+            while available == 0 && ß.time < max {
                 Thread.sleep(0.01)
             }
             if available == 0 {
                 return []
             }
         }
-        var count=min(available,desired)
-        var data=[T](repeating: zero, count: count)
+        var count = min(available, desired)
+        var data = [T](repeating: zero, count: count)
         lock.sync {
-            var w=0
+            var w = 0
             while true {
-                let n=min((self.ro>self.wo) ? (self.buffer.count-self.ro) : (self.wo-self.ro), count)
-                if n<=0 {
+                let n = min(
+                    (self.ro > self.wo) ? (self.buffer.count - self.ro) : (self.wo - self.ro), count
+                )
+                if n <= 0 {
                     break
                 }
-                data.replaceSubrange(w..<w+n, with: self.buffer[self.ro..<self.ro+n])
+                data.replaceSubrange(w..<w + n, with: self.buffer[self.ro..<self.ro + n])
                 self.ro = (self.ro + n) % self.buffer.count
                 count -= n
                 w += n
@@ -215,30 +226,33 @@ public class CircularStream<T> : Stream<T> {
         onFreespace.dispatch(())
         return data
     }
-    init(capacity:Int,zero:T,timeout:Double=5,data:(()->())?=nil,error:((Error)->())?=nil) {
+    init(
+        capacity: Int, zero: T, timeout: Double = 5, data: (() -> Void)? = nil,
+        error: ((Error) -> Void)? = nil
+    ) {
         self.zero = zero
-        buffer=[T](repeating: zero, count: capacity)
-        super.init(timeout:timeout,data:data,error:error)
+        buffer = [T](repeating: zero, count: capacity)
+        super.init(timeout: timeout, data: data, error: error)
     }
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-public class BufferedStream<T> : Stream<T> {
-    let lock=Lock()
-    var buffer=[T]()
-    public override var free:Int {
+public class BufferedStream<T>: Stream<T>, @unchecked Sendable {
+    let lock = Lock()
+    var buffer = [T]()
+    public override var free: Int {
         return Int.max
     }
-    public override var available:Int {
+    public override var available: Int {
         return buffer.count
     }
-    public override func read(_ desired:Int) -> [T] {
-        var ret:[T]?=nil
+    public override func read(_ desired: Int) -> [T] {
+        var ret: [T]? = nil
         lock.sync {
-            let n=min(desired,self.buffer.count)
-            if n>0 {
-                ret=Array(self.buffer[0..<n])
+            let n = min(desired, self.buffer.count)
+            if n > 0 {
+                ret = Array(self.buffer[0..<n])
                 self.buffer.removeSubrange(0..<n)
             }
         }
@@ -247,9 +261,9 @@ public class BufferedStream<T> : Stream<T> {
         }
         return ret ?? []
     }
-    public override func write(_ data:[T],offset:Int,count:Int) -> Int {
+    public override func write(_ data: [T], offset: Int, count: Int) -> Int {
         lock.sync {
-            self.buffer.append(contentsOf: data[offset..<(offset+count)])
+            self.buffer.append(contentsOf: data[offset..<(offset + count)])
         }
         onData.dispatch(())
         return count
@@ -257,29 +271,29 @@ public class BufferedStream<T> : Stream<T> {
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-public class UTF8Writer : BufferedStream<UInt8> {
-    public func write(_ string:String) -> Int {
-        let b=Array<UInt8>(string.utf8)
+public class UTF8Writer: BufferedStream<UInt8>, @unchecked Sendable {
+    public func write(_ string: String) -> Int {
+        let b = [UInt8](string.utf8)
         return self.write(b, offset: 0, count: b.count)
     }
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-public class UTF8Reader : BufferedStream<UInt8> {
-    var cursor=0
-    public var bigEndian : Bool = false
+public class UTF8Reader: BufferedStream<UInt8>, @unchecked Sendable {
+    var cursor = 0
+    public var bigEndian: Bool = false
     public func readLine() -> String? {
-        var str:String?
+        var str: String?
         lock.sync {
-            while self.cursor<self.buffer.count {
-                if self.buffer[self.cursor]==10 {
-                    let sub=self.buffer[0..<self.cursor]
-                    str=String(bytes:sub,encoding:String.Encoding.utf8)
-                    if let s=str {
-                        str=s.replacingOccurrences(of:"\r",with:"")
+            while self.cursor < self.buffer.count {
+                if self.buffer[self.cursor] == 10 {
+                    let sub = self.buffer[0..<self.cursor]
+                    str = String(bytes: sub, encoding: String.Encoding.utf8)
+                    if let s = str {
+                        str = s.replacingOccurrences(of: "\r", with: "")
                     }
                     self.buffer.removeSubrange(0...self.cursor)
-                    self.cursor=0
+                    self.cursor = 0
                     break
                 }
                 self.cursor += 1
@@ -288,97 +302,97 @@ public class UTF8Reader : BufferedStream<UInt8> {
         return str
     }
     public func readAll() -> String? {
-        var str:String?
+        var str: String?
         self.onFreespace.dispatch(())
         lock.sync {
-            str=String(bytes: self.buffer, encoding: String.Encoding.utf8)
+            str = String(bytes: self.buffer, encoding: String.Encoding.utf8)
             self.buffer.removeAll()
         }
         return str
     }
     public func readUInt8() -> UInt8? {
-        var b : UInt8? = nil
-        if available>1 {
-            let t=self.read(1)
-                b = t[0]
+        var b: UInt8? = nil
+        if available > 1 {
+            let t = self.read(1)
+            b = t[0]
         }
         return b
     }
     public func readUInt16() -> UInt16? {
-        var b : UInt16? = nil
-        if available>2 {
-            let t=self.read(2)
-            
-                if bigEndian {
-                    b = UInt16(t[1]) | (UInt16(t[0])<<8)
-                } else {
-                    b = UInt16(t[0]) | (UInt16(t[1])<<8)
-                }
-            
+        var b: UInt16? = nil
+        if available > 2 {
+            let t = self.read(2)
+
+            if bigEndian {
+                b = UInt16(t[1]) | (UInt16(t[0]) << 8)
+            } else {
+                b = UInt16(t[0]) | (UInt16(t[1]) << 8)
+            }
+
         }
         return b
     }
     public func readUInt32() -> UInt32? {
-        var b : UInt32? = nil
-        if available>4 {
-            let t=self.read(4)
-                if bigEndian {
-                    let v0 = UInt32(t[3])
-                    let v1 = UInt32(t[2])<<8
-                    let v2 = UInt32(t[1])<<16
-                    let v3 = UInt32(t[0])<<24
-                    b = v0 | v1 | v2 | v3
-                } else {
-                    let v0 = UInt32(t[0])
-                    let v1 = UInt32(t[1])<<8
-                    let v2 = UInt32(t[2])<<16
-                    let v3 = UInt32(t[3])<<24
-                    b = v0 | v1 | v2 | v3
-                }
-            
+        var b: UInt32? = nil
+        if available > 4 {
+            let t = self.read(4)
+            if bigEndian {
+                let v0 = UInt32(t[3])
+                let v1 = UInt32(t[2]) << 8
+                let v2 = UInt32(t[1]) << 16
+                let v3 = UInt32(t[0]) << 24
+                b = v0 | v1 | v2 | v3
+            } else {
+                let v0 = UInt32(t[0])
+                let v1 = UInt32(t[1]) << 8
+                let v2 = UInt32(t[2]) << 16
+                let v3 = UInt32(t[3]) << 24
+                b = v0 | v1 | v2 | v3
+            }
+
         }
         return b
     }
     public func readUInt64() -> UInt64? {
-        var b : UInt64? = nil
-        if available>4 {
-             let t=self.read(8)
-                if bigEndian {
-                    let v0 = UInt64(t[7])
-                    let v1 = UInt64(t[6])<<8
-                    let v2 = UInt64(t[5])<<16
-                    let v3 = UInt64(t[4])<<24
-                    let v4 = UInt64(t[3])<<32
-                    let v5 = UInt64(t[2])<<40
-                    let v6 = UInt64(t[1])<<48
-                    let v7 = UInt64(t[0])<<56
-                    b = v0 | v1 | v2 | v3 | v4 | v5 | v6 | v7
-                } else {
-                    let v0 = UInt64(t[0])
-                    let v1 = UInt64(t[1])<<8
-                    let v2 = UInt64(t[2])<<16
-                    let v3 = UInt64(t[3])<<24
-                    let v4 = UInt64(t[4])<<32
-                    let v5 = UInt64(t[5])<<40
-                    let v6 = UInt64(t[6])<<48
-                    let v7 = UInt64(t[7])<<56
-                    b = v0 | v1 | v2 | v3 | v4 | v5 | v6 | v7
-                }
-            
+        var b: UInt64? = nil
+        if available > 4 {
+            let t = self.read(8)
+            if bigEndian {
+                let v0 = UInt64(t[7])
+                let v1 = UInt64(t[6]) << 8
+                let v2 = UInt64(t[5]) << 16
+                let v3 = UInt64(t[4]) << 24
+                let v4 = UInt64(t[3]) << 32
+                let v5 = UInt64(t[2]) << 40
+                let v6 = UInt64(t[1]) << 48
+                let v7 = UInt64(t[0]) << 56
+                b = v0 | v1 | v2 | v3 | v4 | v5 | v6 | v7
+            } else {
+                let v0 = UInt64(t[0])
+                let v1 = UInt64(t[1]) << 8
+                let v2 = UInt64(t[2]) << 16
+                let v3 = UInt64(t[3]) << 24
+                let v4 = UInt64(t[4]) << 32
+                let v5 = UInt64(t[5]) << 40
+                let v6 = UInt64(t[6]) << 48
+                let v7 = UInt64(t[7]) << 56
+                b = v0 | v1 | v2 | v3 | v4 | v5 | v6 | v7
+            }
+
         }
         return b
     }
-    init(bigEndian:Bool=false) {
+    init(bigEndian: Bool = false) {
         self.bigEndian = bigEndian
         super.init()
     }
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-public class DataReader : Stream<UInt8> {
-    let data : Data
-    var cursor : Int
-    public init(data:Data) {
+public class DataReader: Stream<UInt8>, @unchecked Sendable {
+    let data: Data
+    var cursor: Int
+    public init(data: Data) {
         self.cursor = 0
         self.data = data
         super.init()
@@ -387,10 +401,10 @@ public class DataReader : Stream<UInt8> {
         return data.count - cursor
     }
     override public func read(_ desired: Int) -> [UInt8] {
-        let r = min(desired,available)
-        var b = [UInt8](repeating:0,count:r)
-        b.withUnsafeMutableBufferPointer{ ptr in
-            data.copyBytes(to: ptr.baseAddress!, from: cursor..<cursor+r)
+        let r = min(desired, available)
+        var b = [UInt8](repeating: 0, count: r)
+        b.withUnsafeMutableBufferPointer { ptr in
+            data.copyBytes(to: ptr.baseAddress!, from: cursor..<cursor + r)
         }
         cursor += r
         return b
@@ -399,24 +413,24 @@ public class DataReader : Stream<UInt8> {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 #if os(iOS) || os(tvOS) || os(OSX)
-    public class FileReader : Stream<UInt8> {
-        let filename:String
-        var file:InputStream?
-        let size:Int
-        var read:Int=0
-        public override var available:Int {
-            return size-read
+    public class FileReader: Stream<UInt8>, @unchecked Sendable {
+        let filename: String
+        var file: InputStream?
+        let size: Int
+        var read: Int = 0
+        public override var available: Int {
+            return size - read
         }
-        public override func read(_ desired:Int) -> [UInt8] {
-            var data=[UInt8](repeating: 0, count: desired)
+        public override func read(_ desired: Int) -> [UInt8] {
+            var data = [UInt8](repeating: 0, count: desired)
             let n = data.withUnsafeMutableBufferPointer { ptr in
                 return file!.read(ptr.baseAddress!, maxLength: desired)
             }
-            if n>0 {
+            if n > 0 {
                 read += n
-                if read<size {
+                if read < size {
                     wait(0.001).then { _ in
-                        if self.read<self.size {
+                        if self.read < self.size {
                             self.onData.dispatch(())
                         }
                     }
@@ -425,7 +439,7 @@ public class DataReader : Stream<UInt8> {
                         self.close()
                     }
                 }
-                if n==desired {
+                if n == desired {
                     return data
                 }
                 data.removeSubrange(n..<desired)
@@ -434,15 +448,18 @@ public class DataReader : Stream<UInt8> {
             return []
         }
         public override func close() {
-            if let f=file {
+            if let f = file {
                 f.close()
                 self.file = nil
             }
-            read=size
+            read = size
             super.close()
         }
-        init(filename:String,timeout:Double=5,data:(()->())?=nil,error:((Error)->())?=nil) {
-            self.filename=filename
+        init(
+            filename: String, timeout: Double = 5, data: (() -> Void)? = nil,
+            error: ((Error) -> Void)? = nil
+        ) {
+            self.filename = filename
             file = InputStream(fileAtPath: filename)
             file!.open()
             do {
@@ -451,113 +468,122 @@ public class DataReader : Stream<UInt8> {
             } catch {
                 size = 0
             }
-            super.init(timeout:timeout,data:data,error:error)
+            super.init(timeout: timeout, data: data, error: error)
             wait(0.001).then { _ in
-                if self.read<self.size {
+                if self.read < self.size {
                     self.onData.dispatch(())
                 }
             }
         }
     }
-    public class FileWriter : Stream<UInt8> {
-        let filename:String
-        var file:OutputStream?
-        let he=HE()
-        public override func write(_ data:[UInt8],offset:Int,count:Int) -> Int {
+    public class FileWriter: Stream<UInt8>, @unchecked Sendable {
+        let filename: String
+        var file: OutputStream?
+        let he = HE()
+        public override func write(_ data: [UInt8], offset: Int, count: Int) -> Int {
             return data.withUnsafeBufferPointer { ptr in
-                return file!.write(ptr.baseAddress!.advanced(by: offset), maxLength:count)
+                return file!.write(ptr.baseAddress!.advanced(by: offset), maxLength: count)
             }
         }
         public override func close() {
-            if let f=file {
+            if let f = file {
                 f.close()
                 f.delegate = nil
                 file = nil
             }
         }
-        init(filename:String,timeout:Double=5,data:(()->())?=nil,error:((Error)->())?=nil) {
-            self.filename=filename
-            file=OutputStream(toFileAtPath: filename, append: false)
+        init(
+            filename: String, timeout: Double = 5, data: (() -> Void)? = nil,
+            error: ((Error) -> Void)? = nil
+        ) {
+            self.filename = filename
+            file = OutputStream(toFileAtPath: filename, append: false)
             //file!.delegate = he
             file!.schedule(in: RunLoop.current, forMode: RunLoop.Mode.default)
             file!.open()
-            super.init(timeout:timeout,data:data,error:error)
+            super.init(timeout: timeout, data: data, error: error)
         }
     }
-    @objc class HE : NSObject,StreamDelegate {
+    @objc class HE: NSObject, StreamDelegate {
         @objc func stream(_ aStream: Foundation.Stream, handle eventCode: Foundation.Stream.Event) {
         }
     }
 #else
-public class FileReader : Stream {
-    let filename:String
-    var file:UnsafeMutablePointer<FILE>
-    let size:Int
-    var read:Int=0
-    public override var available:Int {
-        return size-read
-    }
-    public override func read(desired:Int) -> [UInt8]? {
-        var data=[UInt8](count:desired, repeatedValue:0)
-        let n=fread(UnsafeMutablePointer(data),1,desired,file)
-        if n>0 {
-            read += n
-            if read<size {
-                wait(0.001).then { _ in
-                    if self.read<self.size {
-                        self.onData.dispatch()
+    public class FileReader: Stream {
+        let filename: String
+        var file: UnsafeMutablePointer<FILE>
+        let size: Int
+        var read: Int = 0
+        public override var available: Int {
+            return size - read
+        }
+        public override func read(desired: Int) -> [UInt8]? {
+            var data = [UInt8](count: desired, repeatedValue: 0)
+            let n = fread(UnsafeMutablePointer(data), 1, desired, file)
+            if n > 0 {
+                read += n
+                if read < size {
+                    wait(0.001).then { _ in
+                        if self.read < self.size {
+                            self.onData.dispatch()
+                        }
+                    }
+                } else if read == size {
+                    wait(0.001).then { _ in
+                        self.close()
                     }
                 }
-            } else if read == size {
-                wait(0.001).then { _ in
-                    self.close()
+                if n == desired {
+                    return data
                 }
-            }
-            if n==desired {
+                data.removeRange(n..<desired)
                 return data
             }
-            data.removeRange(n..<desired)
-            return data
+            return nil
         }
-        return nil
-    }
-    public override func close() {
-        if file != nil {
-            fclose(file)
-            file = nil
+        public override func close() {
+            if file != nil {
+                fclose(file)
+                file = nil
+            }
+            read = size
+            super.close()
         }
-        read=size
-        super.close()
-    }
-    init(filename:String,timeout:Double=5,data:(()->())?=nil,error:((Error)->())?=nil) {
-        self.filename=filename
-        file=fopen(filename, "r")
-        fseek(file, 0, SEEK_END)
-        size=ftell(file)
-        fseek(file, 0,SEEK_SET)
-        super.init(timeout:timeout,data:data,error:error)
-        wait(0.001).then { _ in
-            if self.read<self.size {
-                self.onData.dispatch()
+        init(
+            filename: String, timeout: Double = 5, data: (() -> Void)? = nil,
+            error: ((Error) -> Void)? = nil
+        ) {
+            self.filename = filename
+            file = fopen(filename, "r")
+            fseek(file, 0, SEEK_END)
+            size = ftell(file)
+            fseek(file, 0, SEEK_SET)
+            super.init(timeout: timeout, data: data, error: error)
+            wait(0.001).then { _ in
+                if self.read < self.size {
+                    self.onData.dispatch()
+                }
             }
         }
     }
-}
-public class FileWriter : Stream {
-    let filename:String
-    let file:UnsafeMutablePointer<FILE>
-    public override func write(data:[UInt8],offset:Int,count:Int) -> Int {
-        return fwrite(UnsafePointer<Int8>(data).advancedBy(offset), 1, count, file)
+    public class FileWriter: Stream {
+        let filename: String
+        let file: UnsafeMutablePointer<FILE>
+        public override func write(data: [UInt8], offset: Int, count: Int) -> Int {
+            return fwrite(UnsafePointer<Int8>(data).advancedBy(offset), 1, count, file)
+        }
+        public override func close() {
+            fclose(file)
+        }
+        init(
+            filename: String, timeout: Double = 5, data: (() -> Void)? = nil,
+            error: ((Error) -> Void)? = nil
+        ) {
+            self.filename = filename
+            file = fopen(filename, "w")
+            super.init(timeout: timeout, data: data, error: error)
+        }
     }
-    public override func close() {
-        fclose(file)
-    }
-    init(filename:String,timeout:Double=5,data:(()->())?=nil,error:((Error)->())?=nil) {
-        self.filename=filename
-        file=fopen(filename, "w")
-        super.init(timeout:timeout,data:data,error:error)
-    }
-}
 #endif
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////

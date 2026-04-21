@@ -241,7 +241,7 @@ open class Node: Atom, @unchecked Sendable {
     public let onDetach = Event<Void>()
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    var prop: SynchronizedDictionnary<String, Any> = SynchronizedDictionnary<String, Any>()
+    var prop: SynchronizedDictionnary<String, Sendable> = SynchronizedDictionnary<String, Sendable>()
     public private(set) var classes = Classes()
     public var parent: Node?
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -282,7 +282,7 @@ open class Node: Atom, @unchecked Sendable {
         return nil
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public subscript(k: String) -> Any? {
+    public subscript(k: String) -> Sendable? {
         get {
             if let v = prop[k] {
                 if let p = v as? Property {
@@ -323,9 +323,9 @@ open class Node: Atom, @unchecked Sendable {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 open class Property: Node, @unchecked Sendable {
-    public let onGetValue = Event<Any?>()
-    var _value: Any?
-    public var value: Any? {
+    public let onGetValue = Event<Sendable?>()
+    var _value: Sendable?
+    public var value: Sendable? {
         get {
             onGetValue.dispatch(_value)
             return _value
@@ -341,7 +341,7 @@ open class Property: Node, @unchecked Sendable {
         self._value = nil
         super.init(parent: nil)
     }
-    public init(value: Any) {
+    public init(value: Sendable) {
         self._value = value
         super.init(parent: nil)
     }

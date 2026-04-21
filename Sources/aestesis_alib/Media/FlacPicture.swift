@@ -21,8 +21,8 @@ import Foundation
 
 // format: https://xiph.org/flac/format.html#metadata_block_picture
 
-public class FlacPicture : NodeUI {
-    public static func get(parent:NodeUI, base64 b64:String) -> Bitmap? {
+public class FlacPicture: NodeUI, @unchecked Sendable {
+    public static func get(parent: NodeUI, base64 b64: String) -> Bitmap? {
         var base64 = b64
         let n = base64.length & 3
         if n != 0 {
@@ -38,12 +38,12 @@ public class FlacPicture : NodeUI {
             let mime = String(bytes: mt, encoding: .ascii)!
             let dl = r.readUInt32()!
             var desc = ""
-            if dl>0 {
+            if dl > 0 {
                 let dt = r.read(Int(dl))
                 desc = String(bytes: dt, encoding: .ascii)!
             }
-            let _ = Int(r.readUInt32()!)    // width or 0
-            let _ = Int(r.readUInt32()!)    // height or 0
+            let _ = Int(r.readUInt32()!)  // width or 0
+            let _ = Int(r.readUInt32()!)  // height or 0
             let depth = r.readUInt32()!
             let cidx = r.readUInt32()!
             let pictsize = r.readUInt32()!
@@ -56,12 +56,11 @@ public class FlacPicture : NodeUI {
             b["type"] = type
             return Bitmap(parent: parent, data: d)
         } else {
-            Debug.error("not a base64 string",#file,#line)
+            Debug.error("not a base64 string", #file, #line)
         }
         return nil
     }
-    public enum PictureType : UInt32
-    {
+    public enum PictureType: UInt32, Sendable {
         case other = 0
         case pngIcon = 1
         case otherIcon = 2
@@ -85,4 +84,3 @@ public class FlacPicture : NodeUI {
         case publisher = 20
     }
 }
-

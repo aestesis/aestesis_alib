@@ -5,22 +5,20 @@
 //  Created by renan jegouzo on 29/10/2023.
 //
 
-import Foundation
-import CoreImage
 import AVFoundation
+import CoreImage
+import Foundation
 
 #if os(iOS)
-import UIKit
+    import UIKit
 #else
-import AppKit
+    import AppKit
 #endif
-
-
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 extension AVAsset {
-    func generateThumbnail(_ fn: @escaping (CGImage?)->()) {
+    func generateThumbnail(_ fn: @escaping @Sendable (CGImage?) -> Void) {
         let imageGenerator = AVAssetImageGenerator(asset: self)
         let time = CMTime(seconds: 0.0, preferredTimescale: 600)
         let times = [NSValue(time: time)]
@@ -47,58 +45,60 @@ extension CGImage {
         guard
             let context = CGContext(
                 data: nil, width: width, height: height, bitsPerComponent: self.bitsPerComponent,
-                bytesPerRow: destBytesPerRow, space: colorSpace, bitmapInfo: self.alphaInfo.rawValue)
+                bytesPerRow: destBytesPerRow, space: colorSpace, bitmapInfo: self.alphaInfo.rawValue
+            )
         else { return nil }
         context.interpolationQuality = .high
-        let rr : Double = (Double(self.width) / Double(self.height)) / (Double(width) / Double(height))
-        if rr>=1 {
-            let dx = Int((Double(width) * rr - Double(width))*0.5)
-            context.draw(self, in: CGRect(x: -dx, y: 0, width: width + dx*2, height: height))
+        let rr: Double =
+            (Double(self.width) / Double(self.height)) / (Double(width) / Double(height))
+        if rr >= 1 {
+            let dx = Int((Double(width) * rr - Double(width)) * 0.5)
+            context.draw(self, in: CGRect(x: -dx, y: 0, width: width + dx * 2, height: height))
         } else {
-            let dy = Int((Double(height) / rr - Double(height))*0.5)
+            let dy = Int((Double(height) / rr - Double(height)) * 0.5)
             context.draw(self, in: CGRect(x: 0, y: -dy, width: width, height: height + 2 * dy))
         }
         return context.makeImage()
     }
-    
+
     func jpegData() -> Data {
-#if os(iOS)
-        let uiImage = UIImage(cgImage: self)
-        return UIImageJPEGRepresentation(uiImage, 0.9)
-#else
-        let bitmapRep = NSBitmapImageRep(cgImage: self)
-        return bitmapRep.representation(
-            using: NSBitmapImageRep.FileType.jpeg,
-            properties: [NSBitmapImageRep.PropertyKey.compressionFactor: NSNumber(0.9)])!
-#endif
+        #if os(iOS)
+            let uiImage = UIImage(cgImage: self)
+            return UIImageJPEGRepresentation(uiImage, 0.9)
+        #else
+            let bitmapRep = NSBitmapImageRep(cgImage: self)
+            return bitmapRep.representation(
+                using: NSBitmapImageRep.FileType.jpeg,
+                properties: [NSBitmapImageRep.PropertyKey.compressionFactor: NSNumber(0.9)])!
+        #endif
     }
-    
+
     func pngData() -> Data {
-#if os(iOS)
-        let uiImage = UIImage(cgImage: self)
-        return UIImageJPEGRepresentation(uiImage, 0.9)
-#else
-        let bitmapRep = NSBitmapImageRep(cgImage: self)
-        return bitmapRep.representation(
-            using: NSBitmapImageRep.FileType.jpeg,
-            properties: [NSBitmapImageRep.PropertyKey.compressionFactor: NSNumber(0.9)])!
-#endif
+        #if os(iOS)
+            let uiImage = UIImage(cgImage: self)
+            return UIImageJPEGRepresentation(uiImage, 0.9)
+        #else
+            let bitmapRep = NSBitmapImageRep(cgImage: self)
+            return bitmapRep.representation(
+                using: NSBitmapImageRep.FileType.jpeg,
+                properties: [NSBitmapImageRep.PropertyKey.compressionFactor: NSNumber(0.9)])!
+        #endif
     }
-    
+
 }
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 extension URL {
-    var fileExtension:String {
+    var fileExtension: String {
         if isFileURL {
             let filename = self.lastPathComponent
             if let i = filename.lastIndexOf(".") {
-                return String(filename[i+1..<filename.length])
+                return String(filename[i + 1..<filename.length])
             }
         }
         return ""
     }
-    func checkFile(strategy:CheckStrategy) -> URL {
+    func checkFile(strategy: CheckStrategy) -> URL {
         if isFileURL {
             let fm = FileManager.default
             switch strategy {
@@ -116,7 +116,7 @@ extension URL {
                 var npath = path
                 while fm.fileExists(atPath: npath) {
                     npath = path
-                    npath.replace(".\(fileExtension)", with:".\(i).\(fileExtension)")
+                    npath.replace(".\(fileExtension)", with: ".\(i).\(fileExtension)")
                     i += 1
                 }
                 return URL(filePath: npath)

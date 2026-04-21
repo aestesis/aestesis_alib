@@ -19,29 +19,29 @@
 
 import Foundation
 
-public class Cache : NodeUI {
+public class Cache: NodeUI, @unchecked Sendable {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public var capacity:Int
-    var pulse:Future?=nil
-    var lock=Lock()
+    public var capacity: Int
+    var pulse: Future? = nil
+    var lock = Lock()
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public init(parent:NodeUI,capacity:Int=100) {
+    public init(parent: NodeUI, capacity: Int = 100) {
         self.capacity = capacity
-        super.init(parent:parent)
-        pulse=viewport!.pulse(1) {
-            if self.prop.count>capacity*4/3 {
+        super.init(parent: parent)
+        pulse = viewport!.pulse(1) {
+            if self.prop.count > capacity * 4 / 3 {
                 self.lock.sync {
-                    let psort = self.prop._dictionary.map({ k,v -> (time:Double,key:String) in
+                    let psort = self.prop._dictionary.map({ k, v -> (time: Double, key: String) in
                         let p = v as! Property
                         if let t = p["time"] as? Double {
-                            return (time:t,key:k)
+                            return (time: t, key: k)
                         } else {
-                            return (time:0,key:k)
+                            return (time: 0, key: k)
                         }
-                    }).sorted(by: { a,b -> Bool in
+                    }).sorted(by: { a, b -> Bool in
                         return a.time > b.time
                     })
                     for i in capacity..<psort.count {
@@ -57,7 +57,7 @@ public class Cache : NodeUI {
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     override public func detach() {
-        if let p=pulse {
+        if let p = pulse {
             p.cancel()
             pulse = nil
         }
@@ -65,22 +65,22 @@ public class Cache : NodeUI {
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public override subscript(k:String) -> Any? {
+    public override subscript(k: String) -> Sendable? {
         get {
-            var v:Any?=nil
+            var v: Sendable? = nil
             lock.sync {
                 v = prop[k]
-                if let p=v as? Property {
+                if let p = v as? Property {
                     p["time"] = ß.time
                 }
             }
-            if let v=v {
+            if let v = v {
                 if let p = v as? Property {
                     return p.value
                 }
                 return v
             }
-            if let p=parent {
+            if let p = parent {
                 return p[k]
             }
             return nil
@@ -88,7 +88,7 @@ public class Cache : NodeUI {
         set(v) {
             lock.sync {
                 let p = prop[k]
-                if let p=p as? Node {
+                if let p = p as? Node {
                     if let p = p as? Property {
                         p["time"] = ß.time
                         p.value = v
@@ -102,9 +102,9 @@ public class Cache : NodeUI {
                     }
                 }
                 if let v = v {
-                    let p = Property(value:v)
+                    let p = Property(value: v)
                     p["time"] = ß.time
-                    prop[k]=p
+                    prop[k] = p
                 } else {
                     Debug.error("must not happening!!")
                 }
