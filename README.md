@@ -33,15 +33,14 @@ A comprehensive **Swift 3D graphics rendering engine** built on **Metal**, provi
 - **Bounding volume detection**: Boxes, spheres
 
 ### UI Framework
-- **Declarative UI model** (SwiftUI-inspired)
-- **XML-based configuration** (AEXML)
+- **Instance UI model**
 - **Components**: StackView, ButtonView, ImageView, TextView, Touch handling
 - **Layout system** with constraints and sizing
 
 ### Utilities
 - **JSON** serialization/deserialization
 - **Touch/SIG**nal handling
-- **Concurrency**: Future, Stream, Cloud services
+- **Concurrency**: Future, Stream
 - **Debug** utilities
 - **WebSocket** networking
 
@@ -132,64 +131,11 @@ world.add(pointLight)
 
 ---
 
-## 📐 Core Types
-
-### Vertex Format
-
-```swift
-struct Vertex {
-    var position: Vec3
-    var normal: Vec3
-    var uv: Point
-    var color: Color
-}
-```
-
-### Mesh Structure
-
-```swift
-struct Mesh {
-    var name: String
-    var vertices: [Vertex]
-    var faces: [String: [UInt32]]
-    var cullMode: CullMode
-    var winding: Winding
-}
-```
-
----
-
 ## 🚀 Performance
 
 - **Metal GPU acceleration** with compute shaders
 - **Object instances** for draw call reduction
-- **Z-sorting optimization** (planned improvement)
 - **Vertex caching** and batch rendering
-
----
-
-## 🛠️ Development
-
-### Code Structure
-
-```swift
-// 3D Node hierarchy
-class Node3D {
-    var mesh: Mesh?
-    var material: Material
-    var children: [Node3D]
-    
-    func render(to graphics, world, opaque: Bool) -> Bool
-}
-
-// Material system
-class Material {
-    var name: String
-    var albedo: Color
-    var texture: Texture2D?
-    var shader: Program?
-}
-```
 
 ---
 
