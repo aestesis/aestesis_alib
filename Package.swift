@@ -17,7 +17,7 @@ let package = Package(
         )
     ],
     dependencies: [
-        .package(url: "https://github.com/aestesis/libtess.git", from: "1.0.5")
+        .package(url: "https://github.com/aestesis/libtess.git", branch: "master")
     ],
     targets: [
         .target(

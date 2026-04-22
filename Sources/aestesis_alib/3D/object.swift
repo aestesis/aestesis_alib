@@ -143,7 +143,7 @@ public struct Instance {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 open class ObjectCollection: Object, @unchecked Sendable {
     var bufferInstances: Buffer?
-    var instances: [Instance] = [] {
+    public var instances: [Instance] = [] {
         didSet {
             needsInstancesUpdate = true
         }
