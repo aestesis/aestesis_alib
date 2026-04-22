@@ -241,7 +241,9 @@ open class Node: Atom, @unchecked Sendable {
     public let onDetach = Event<Void>()
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    var prop: SynchronizedDictionnary<String, Sendable> = SynchronizedDictionnary<String, Sendable>()
+    var prop: SynchronizedDictionnary<String, Sendable> = SynchronizedDictionnary<
+        String, Sendable
+    >()
     public private(set) var classes = Classes()
     public var parent: Node?
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -562,6 +564,7 @@ public class Event<T>: @unchecked Sendable {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 public class Lock: @unchecked Sendable {
     let queue: DispatchQueue = DispatchQueue(label: "Alib.Lock")
+    public init() {}
     public func sync(_ execute: () -> Void) {
         queue.sync { [weak self] in
             guard self != nil else { return }
