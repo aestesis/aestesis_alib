@@ -239,7 +239,7 @@ public class SynchronizedDictionnary<TK, TV: Sendable>: Collection,
         }
     }
 
-    init(dict: [TK: TV] = [TK: TV]()) {
+    public init(dict: [TK: TV] = [TK: TV]()) {
         self.dictionary = dict
     }
     public func removeAll() {
