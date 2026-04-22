@@ -93,7 +93,7 @@ public class Thread: Atom, @unchecked Sendable {
 public class SynchronizedValue<T: Sendable>: @unchecked Sendable {
     private let accessQueue = DispatchQueue(label: "SynchronizedValueAccess")
     private var _value: T?
-    var value: T? {
+    public var value: T? {
         get {
             var v: T?
             accessQueue.sync {
@@ -184,26 +184,26 @@ public class SynchronizedArray<T: Sendable>: @unchecked Sendable {
         }
     }
 
-    func push(_ newElement: T) {
+    public func push(_ newElement: T) {
         self.append(newElement)
     }
-    func pop() -> T? {
+    public func pop() -> T? {
         return self.removeLast()
     }
-    func peekAtStack() -> T? {
+    public func peekAtStack() -> T? {
         return self.last
     }
-    func enqueue(_ newElement: T) {
+    public func enqueue(_ newElement: T) {
         self.append(newElement)
     }
-    func dequeue() -> T? {
+    public func dequeue() -> T? {
         if count > 0 {
             return self.remove(at: 0)
         } else {
             return nil
         }
     }
-    func peekAtQueue() -> T? {
+    public func peekAtQueue() -> T? {
         return self.first
     }
 }
