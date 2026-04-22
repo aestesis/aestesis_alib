@@ -239,10 +239,6 @@ where TK: Sendable & Hashable {
             return self.dictionary.endIndex
         }
     }
-
-    public init() {
-        self.dictionary = [:]
-    }
     public init(dict: [TK: TV] = [TK: TV]()) {
         self.dictionary = dict
     }
