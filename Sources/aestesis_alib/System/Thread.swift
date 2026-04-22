@@ -107,13 +107,14 @@ public class SynchronizedValue<T: Sendable>: @unchecked Sendable {
             }
         }
     }
+    public init() {}
 }
 
 public class SynchronizedArray<T: Sendable>: @unchecked Sendable {
     private var array: [T] = []
     private let accessQueue = DispatchQueue(
         label: "SynchronizedArrayAccess", attributes: .concurrent)
-
+    public init() {}
     public func append(_ newElement: T) {
         self.accessQueue.async(flags: .barrier) {
             self.array.append(newElement)
@@ -209,8 +210,8 @@ public class SynchronizedArray<T: Sendable>: @unchecked Sendable {
 }
 
 public class SynchronizedDictionnary<TK, TV: Sendable>: Collection,
-    @unchecked Sendable where TK : Sendable & Hashable
-{
+    @unchecked Sendable
+where TK: Sendable & Hashable {
     private let accessQueue: DispatchQueue = DispatchQueue(
         label: "SynchronizedDictionaryAccess", qos: .userInteractive, attributes: .concurrent)
     private var dictionary: [TK: TV]
