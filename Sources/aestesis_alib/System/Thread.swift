@@ -240,6 +240,9 @@ where TK: Sendable & Hashable {
         }
     }
 
+    public init() {
+        self.dictionary = [:]
+    }
     public init(dict: [TK: TV] = [TK: TV]()) {
         self.dictionary = dict
     }
