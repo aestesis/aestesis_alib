@@ -24,10 +24,10 @@ public class Thread: Atom, @unchecked Sendable {
     init(nst: Foundation.Thread) {
         self.nst = nst
     }
-    static var callStackSymbols: [String] {
+    public static var callStackSymbols: [String] {
         return Foundation.Thread.callStackSymbols
     }
-    static var current: Thread {
+    public static var current: Thread {
         if let t = Foundation.Thread.current.threadDictionary["aestesis.alib.Thread"] as? Thread {
             return t
         }
