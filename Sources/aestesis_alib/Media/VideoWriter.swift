@@ -36,7 +36,7 @@ public class VideoWriter : @unchecked Sendable {
         return ß.time - startTime
     }
     
-    var status:Status {
+    public var status:Status {
         return Status.fromWriter(writer: writer)
     }
     
@@ -52,7 +52,7 @@ public class VideoWriter : @unchecked Sendable {
         return  number == number.bigEndian
     }
     
-    init(url: URL, size: Size = .zero, fps: Double = 0, options:[Option] = [] ) throws {
+    public init(url: URL, size: Size = .zero, fps: Double = 0, options:[Option] = [] ) throws {
         if options.isEmpty {
             throw Error.noOptions
         }
@@ -121,7 +121,7 @@ public class VideoWriter : @unchecked Sendable {
         Debug.info("VideoWriter released")
     }
     
-    func stop() {
+    public func stop() {
         queue.sync {
             let lock = DispatchGroup()
             lock.enter()
@@ -135,7 +135,7 @@ public class VideoWriter : @unchecked Sendable {
         }
     }
     
-    func close() {
+    public func close() {
         self.onChanged.removeAll()
     }
     
@@ -181,7 +181,7 @@ public class VideoWriter : @unchecked Sendable {
         return buffer
     }
     
-    func write(pcm: [Float]) {
+    public func write(pcm: [Float]) {
         queue.async { [weak self] in
             self?.queudWrite(pcm: pcm)
         }
@@ -220,10 +220,10 @@ public class VideoWriter : @unchecked Sendable {
         return buffer
     }
     
-    enum Error : Swift.Error {
+    public enum Error : Swift.Error {
         case noOptions,videoInputError,audioInputError
     }
-    enum Status : CustomStringConvertible, Equatable {
+    public enum Status : CustomStringConvertible, Equatable {
         static func == (lhs: VideoWriter.Status, rhs: VideoWriter.Status) -> Bool {
             return lhs.description == rhs.description
         }
