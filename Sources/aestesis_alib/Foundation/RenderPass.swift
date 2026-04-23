@@ -156,7 +156,7 @@ public class RenderPass: NodeUI, @unchecked Sendable {
                 height: Int(texture.pixels.height), mipmapped: false)
             dd.usage = [.renderTarget]
             dd.resourceOptions = .storageModePrivate
-            let dt = self.viewport!.gpu.device?.makeTexture(descriptor: dd)
+            let dt = self.viewport!.gpu.device.makeTexture(descriptor: dd)
             descriptor.depthAttachment.clearDepth = depthClear
             descriptor.depthAttachment.texture = dt
             descriptor.depthAttachment.loadAction = MTLLoadAction.clear
@@ -193,7 +193,7 @@ public class RenderPass: NodeUI, @unchecked Sendable {
                     let w = Int(texture.pixels.width)
                     let h = Int(texture.pixels.height)
                     let src = descriptor.depthAttachment.texture!
-                    let depth = self.viewport!.gpu.device!.makeBuffer(
+                    let depth = self.viewport!.gpu.device.makeBuffer(
                         length: w * h * 4, options: MTLResourceOptions())
                     let cb = texture.viewport!.gpu.queue.makeCommandBuffer()
                     let blit = cb?.makeBlitCommandEncoder()
@@ -321,7 +321,7 @@ class Sampler: NodeUI, @unchecked Sendable {
         d.minFilter = .linear
         d.magFilter = .linear
         d.mipFilter = .linear
-        state = viewport.gpu.device!.makeSamplerState(descriptor: d)!
+        state = viewport.gpu.device.makeSamplerState(descriptor: d)!
         super.init(parent: viewport)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -357,14 +357,14 @@ public class DepthStencilState: NodeUI, @unchecked Sendable {
         case .all:
             d.depthCompareFunction = .always
         }
-        state = viewport.gpu.device!.makeDepthStencilState(descriptor: d)!
+        state = viewport.gpu.device.makeDepthStencilState(descriptor: d)!
         super.init(parent: viewport)
     }
     public init(viewport: Viewport) {
         let d = MTLDepthStencilDescriptor()
         d.isDepthWriteEnabled = false
         d.depthCompareFunction = .always
-        state = viewport.gpu.device!.makeDepthStencilState(descriptor: d)!
+        state = viewport.gpu.device.makeDepthStencilState(descriptor: d)!
         super.init(parent: viewport)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -422,7 +422,7 @@ public class Program: NodeUI, @unchecked Sendable {
     ) {
         super.init(parent: viewport)
         initPipelineStates(
-            library: viewport.gpu.library!, vertex: vertex, fragment: fragment,
+            library: viewport.gpu.library, vertex: vertex, fragment: fragment,
             floatShaders: floatShaders, blend: blend, vdesc: Program.VertexDescriptor(vertexFormat),
             pixelFormat: pixelFormat)
     }
@@ -434,7 +434,7 @@ public class Program: NodeUI, @unchecked Sendable {
     ) {
         super.init(parent: viewport)
         initPipelineStates(
-            library: viewport.gpu.library!, vertex: vertex, fragment: fragment,
+            library: viewport.gpu.library, vertex: vertex, fragment: fragment,
             floatShaders: floatShaders, blend: blend, vdesc: vdesc, pixelFormat: pixelFormat)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -547,7 +547,7 @@ public class Program: NodeUI, @unchecked Sendable {
         pipe.vertexDescriptor = vdesc
         pipe.depthAttachmentPixelFormat = format.depthFormat
         do {
-            let rps = try viewport!.gpu.device!.makeRenderPipelineState(descriptor: pipe)
+            let rps = try viewport!.gpu.device.makeRenderPipelineState(descriptor: pipe)
             return rps
         } catch {
             Debug.error("error: Program.initSelf()")
@@ -628,7 +628,7 @@ public class Program: NodeUI, @unchecked Sendable {
 public class Buffer: NodeUI, @unchecked Sendable {
     var b: MTLBuffer
     init(buffers: Buffers, size: Int) {
-        b = buffers.viewport!.gpu.device!.makeBuffer(length: size, options: MTLResourceOptions())!
+        b = buffers.viewport!.gpu.device.makeBuffer(length: size, options: MTLResourceOptions())!
         super.init(parent: buffers)
     }
     public func recycle() {
@@ -718,7 +718,7 @@ public class ProgramLibrary: NodeUI, @unchecked Sendable {
         let metalBundle = Bundle(path: metalBundlePath)!
         let libpath = metalBundle.path(forResource: filename, ofType: "metallib")!
         do {
-            lib = try viewport!.gpu.device!.makeLibrary(URL: Foundation.URL(string: libpath)!)
+            lib = try viewport!.gpu.device.makeLibrary(URL: Foundation.URL(string: libpath)!)
         } catch {
             Debug.error(
                 "can't load metal library \(filename) in \(metalBundle.infoDictionary!["CFBundleName"]!)"

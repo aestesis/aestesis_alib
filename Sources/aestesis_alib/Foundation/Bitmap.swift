@@ -132,7 +132,7 @@ open class Bitmap: Texture2D, @unchecked Sendable {
         else {
             return
         }
-        let gaussian = MPSImageGaussianBlur(device: viewport!.gpu.device!, sigma: Float(sigma))
+        let gaussian = MPSImageGaussianBlur(device: viewport!.gpu.device, sigma: Float(sigma))
         gaussian.encode(commandBuffer: cb, inPlaceTexture: &dt)
         cb.commit()
         cb.waitUntilCompleted()
@@ -146,7 +146,7 @@ open class Bitmap: Texture2D, @unchecked Sendable {
         else {
             return
         }
-        let gaussian = MPSImageGaussianBlur(device: viewport!.gpu.device!, sigma: Float(sigma))
+        let gaussian = MPSImageGaussianBlur(device: viewport!.gpu.device, sigma: Float(sigma))
         gaussian.encode(commandBuffer: cb, sourceTexture: st, destinationTexture: dt)
         cb.commit()
         cb.waitUntilCompleted()

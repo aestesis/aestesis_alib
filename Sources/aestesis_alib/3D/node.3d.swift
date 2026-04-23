@@ -18,7 +18,7 @@ open class NodeRenderer: NodeUI, @unchecked Sendable {
         return (self.ancestor() as RendererProtocol?) as? NodeUI
     }
     public func persitentBuffer(_ size: Int) -> Buffer {
-        return viewport!.gpu.buffers!.get(size, persistent: true)
+        return viewport!.gpu.buffers.get(size, persistent: true)
     }
     public init(parent: NodeUI) {
         super.init(parent: parent)

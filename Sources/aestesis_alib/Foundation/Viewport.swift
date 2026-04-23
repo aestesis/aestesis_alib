@@ -32,22 +32,34 @@ import Foundation
 public class Viewport: NodeUI, @unchecked Sendable {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    class GPU {
-        var device: MTLDevice?
-        var queue: MTLCommandQueue {
+    public class GPU {
+        public init(
+            device: MTLDevice, library: ProgramLibrary, loader: MTKTextureLoader, buffers: Buffers
+        ) {
+            self.device = device
+            self.library = library
+            self.loader = loader
+            self.buffers = buffers
+        }
+        func detach() {
+            library.detach()
+            buffers.detach()
+        }
+        public let device: MTLDevice
+        public let library: ProgramLibrary
+        public let loader: MTKTextureLoader
+        public let buffers: Buffers
+        public var queue: MTLCommandQueue {
             let key = "aestesis.alib.Viewport.GPU.queue"
             if let q = Thread.current[key] as? MTLCommandQueue {
                 return q
             }
             Debug.info("Viewport.GPU: new command queue for thread")
-            let q = device!.makeCommandQueue()
+            let q = device.makeCommandQueue()
             Thread.current[key] = q
             return q!
         }
-        var library: ProgramLibrary?
-        var loader: MTKTextureLoader?
-        var buffers: Buffers?
-        var tess: Tess {
+        public var tess: Tess {
             let key = "aestesis.alib.Viewport.GPU.libtess"
             if let t = Thread.current[key] as? Tess {
                 return t
@@ -59,7 +71,8 @@ public class Viewport: NodeUI, @unchecked Sendable {
         }
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    let gpu = GPU()
+    var _gpu: GPU?
+    public var gpu: GPU { return _gpu! }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     let _textureCache: TextureCache
@@ -496,11 +509,10 @@ public class Viewport: NodeUI, @unchecked Sendable {
         _textureCache = TextureCache(device: device)
         super.init(parent: nil)
         Debug.warning("Viewport.init(\(size))  orientation:\(self.orientation)")
-        gpu.device = device
-        gpu.loader = MTKTextureLoader(device: device)
+        _gpu = GPU(
+            device: device, library: ProgramLibrary(parent: self, filename: "default"),
+            loader: MTKTextureLoader(device: device), buffers: Buffers(viewport: self))
         _size = size
-        gpu.library = ProgramLibrary(parent: self, filename: "default")
-        gpu.buffers = Buffers(viewport: self)
         Graphics.globals(self)
         Renderer.globals(self)
         Effect.globals(self)
@@ -534,12 +546,7 @@ public class Viewport: NodeUI, @unchecked Sendable {
         self._io?.detach()
         self._bg?.detach()
         self._zz?.detach()
-        gpu.buffers?.detach()
-        gpu.buffers = nil
-        gpu.library?.detach()
-        gpu.library = nil
-        gpu.loader = nil
-        gpu.device = nil
+        gpu.detach()
         super.detach()
         //Atom.debugInfo()
         Debug.info("Viewport detached")

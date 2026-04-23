@@ -44,7 +44,7 @@ public class Texture3D: NodeUI, @unchecked Sendable {
         textureDescriptor.height = size
         textureDescriptor.depth = size
         textureDescriptor.usage = .shaderRead
-        self.texture = viewport?.gpu.device?.makeTexture(descriptor: textureDescriptor)
+        self.texture = viewport?.gpu.device.makeTexture(descriptor: textureDescriptor)
         if let texture = texture, let pixels = pixels {
             pixels.withUnsafeBytes { bytes in
                 texture.replace(

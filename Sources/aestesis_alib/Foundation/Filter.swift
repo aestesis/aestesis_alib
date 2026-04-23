@@ -25,7 +25,7 @@ public class Filter: NodeUI, @unchecked Sendable {
         cb?.commit()
     }
     public init(viewport: Viewport, blur sigma: Double) {
-        kernel = MPSImageGaussianBlur(device: viewport.gpu.device!, sigma: Float(sigma))
+        kernel = MPSImageGaussianBlur(device: viewport.gpu.device, sigma: Float(sigma))
         kernel.edgeMode = .clamp
         super.init(parent: viewport)
     }

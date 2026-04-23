@@ -1241,7 +1241,7 @@ open class Graphics: NodeUI, @unchecked Sendable {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public func buffer(_ size: Int) -> Buffer {
-        let b = viewport!.gpu.buffers!.get(size)
+        let b = viewport!.gpu.buffers.get(size)
         render.onDone.once { ok in
             b.recycle()
         }
@@ -1479,15 +1479,15 @@ open class Graphics: NodeUI, @unchecked Sendable {
                 blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
         #endif
         Program.populateDefaultBlendModes(
-            store: viewport, key: "program.texture.mask", library: viewport.gpu.library!,
+            store: viewport, key: "program.texture.mask", library: viewport.gpu.library,
             vertex: "textureFuncVertex", fragment: "textureMaskFragment",
             vertexFormat: [.float3, .float4, .float2])
         Program.populateDefaultBlendModes(
-            store: viewport, key: "program.texture.bitmap.mask", library: viewport.gpu.library!,
+            store: viewport, key: "program.texture.bitmap.mask", library: viewport.gpu.library,
             vertex: "textureBitmapMaskFuncVertex", fragment: "textureBitmapMaskFragment",
             vertexFormat: [.float3, .float4, .float2])
         Program.populateDefaultBlendModes(
-            store: viewport, key: "program.gradient.mask", library: viewport.gpu.library!,
+            store: viewport, key: "program.gradient.mask", library: viewport.gpu.library,
             vertex: "textureBitmapMaskFuncVertex", fragment: "textureGradientMaskFragment",
             vertexFormat: [.float3, .float4, .float2])
         viewport["program.blur.horizontal.copy"] = Program(
@@ -1577,19 +1577,19 @@ open class Graphics: NodeUI, @unchecked Sendable {
             blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
 
         Program.populateDefaultBlendModes(
-            store: viewport, key: "program.generate.lut", library: viewport.gpu.library!,
+            store: viewport, key: "program.generate.lut", library: viewport.gpu.library,
             vertex: "textureFuncVertex", fragment: "generateLutHsvDecal",
             vertexFormat: [.float3, .float4, .float2])
         Program.populateDefaultBlendModes(
-            store: viewport, key: "program.lut", library: viewport.gpu.library!,
+            store: viewport, key: "program.lut", library: viewport.gpu.library,
             vertex: "textureFuncVertex", fragment: "textureLutFragment",
             vertexFormat: [.float3, .float4, .float2])
         Program.populateDefaultBlendModes(
-            store: viewport, key: "program.gradient", library: viewport.gpu.library!,
+            store: viewport, key: "program.gradient", library: viewport.gpu.library,
             vertex: "textureFuncVertex", fragment: "gradientFragment",
             vertexFormat: [.float3, .float4, .float2])
         Program.populateDefaultBlendModes(
-            store: viewport, key: "program.gradient.height", library: viewport.gpu.library!,
+            store: viewport, key: "program.gradient.height", library: viewport.gpu.library,
             vertex: "textureFuncVertex", fragment: "gradientHeightFragment",
             vertexFormat: [.float3, .float4, .float2])
     }

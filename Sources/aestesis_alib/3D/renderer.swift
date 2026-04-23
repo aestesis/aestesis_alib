@@ -144,215 +144,215 @@ public class Renderer: NodeUI, @unchecked Sendable {
             viewport: viewport, mode: .greater, write: false)
         // Object rendering
         Program.populateDefaultBlendModes(
-            store: viewport, key: "program.3d.basic", library: viewport.gpu.library!,
+            store: viewport, key: "program.3d.basic", library: viewport.gpu.library,
             vertex: "vertex3DFunc", fragment: "fragmentFunc",
             vertexFormat: [.float3, .float4, .float2, .float3])
         Program.populateDefaultBlendModes(
-            store: viewport, key: "program.3d.texture", library: viewport.gpu.library!,
+            store: viewport, key: "program.3d.texture", library: viewport.gpu.library,
             vertex: "vertex3DFunc", fragment: "fragmentTextureFunc",
             vertexFormat: [.float3, .float4, .float2, .float3])
         Program.populateDefaultBlendModes(
-            store: viewport, key: "program.3d.directional.basic", library: viewport.gpu.library!,
+            store: viewport, key: "program.3d.directional.basic", library: viewport.gpu.library,
             vertex: "vertex3DFunc", fragment: "fragmentDirectionalLightFunc",
             vertexFormat: [.float3, .float4, .float2, .float3])
         Program.populateDefaultBlendModes(
-            store: viewport, key: "program.3d.directional.texture", library: viewport.gpu.library!,
+            store: viewport, key: "program.3d.directional.texture", library: viewport.gpu.library,
             vertex: "vertex3DFunc", fragment: "fragmentTextureDirectionalLightFunc",
             vertexFormat: [.float3, .float4, .float2, .float3])
         Program.populateDefaultBlendModes(
-            store: viewport, key: "program.3d.point.1.basic", library: viewport.gpu.library!,
+            store: viewport, key: "program.3d.point.1.basic", library: viewport.gpu.library,
             vertex: "vertex3DFunc", fragment: "fragmentPointLightFunc",
             vertexFormat: [.float3, .float4, .float2, .float3])
         Program.populateDefaultBlendModes(
-            store: viewport, key: "program.3d.point.1.texture", library: viewport.gpu.library!,
+            store: viewport, key: "program.3d.point.1.texture", library: viewport.gpu.library,
             vertex: "vertex3DFunc", fragment: "fragmentTexturePointLightFunc",
             vertexFormat: [.float3, .float4, .float2, .float3])
         Program.populateDefaultBlendModes(
-            store: viewport, key: "program.3d.point.2.basic", library: viewport.gpu.library!,
+            store: viewport, key: "program.3d.point.2.basic", library: viewport.gpu.library,
             vertex: "vertex3DFunc", fragment: "fragmentPoint2LightFunc",
             vertexFormat: [.float3, .float4, .float2, .float3])
         Program.populateDefaultBlendModes(
-            store: viewport, key: "program.3d.point.2.texture", library: viewport.gpu.library!,
+            store: viewport, key: "program.3d.point.2.texture", library: viewport.gpu.library,
             vertex: "vertex3DFunc", fragment: "fragmentTexturePoint2LightFunc",
             vertexFormat: [.float3, .float4, .float2, .float3])
         Program.populateDefaultBlendModes(
-            store: viewport, key: "program.3d.point.3.basic", library: viewport.gpu.library!,
+            store: viewport, key: "program.3d.point.3.basic", library: viewport.gpu.library,
             vertex: "vertex3DFunc", fragment: "fragmentPoint3LightFunc",
             vertexFormat: [.float3, .float4, .float2, .float3])
         Program.populateDefaultBlendModes(
-            store: viewport, key: "program.3d.point.3.texture", library: viewport.gpu.library!,
+            store: viewport, key: "program.3d.point.3.texture", library: viewport.gpu.library,
             vertex: "vertex3DFunc", fragment: "fragmentTexturePoint3LightFunc",
             vertexFormat: [.float3, .float4, .float2, .float3])
         Program.populateDefaultBlendModes(
-            store: viewport, key: "program.3d.point.4.basic", library: viewport.gpu.library!,
+            store: viewport, key: "program.3d.point.4.basic", library: viewport.gpu.library,
             vertex: "vertex3DFunc", fragment: "fragmentPoint4LightFunc",
             vertexFormat: [.float3, .float4, .float2, .float3])
         Program.populateDefaultBlendModes(
-            store: viewport, key: "program.3d.point.4.texture", library: viewport.gpu.library!,
+            store: viewport, key: "program.3d.point.4.texture", library: viewport.gpu.library,
             vertex: "vertex3DFunc", fragment: "fragmentTexturePoint4LightFunc",
             vertexFormat: [.float3, .float4, .float2, .float3])
 
         // ObjectCollection rendering (Instances)
         Program.populateDefaultBlendModes(
-            store: viewport, key: "program.3d.instance.basic", library: viewport.gpu.library!,
+            store: viewport, key: "program.3d.instance.basic", library: viewport.gpu.library,
             vertex: "vertex3DInstance", fragment: "fragmentFunc",
             vertexFormat: [.float3, .float4, .float2, .float3])
         Program.populateDefaultBlendModes(
-            store: viewport, key: "program.3d.instance.texture", library: viewport.gpu.library!,
+            store: viewport, key: "program.3d.instance.texture", library: viewport.gpu.library,
             vertex: "vertex3DInstance", fragment: "fragmentTextureFunc",
             vertexFormat: [.float3, .float4, .float2, .float3])
         Program.populateDefaultBlendModes(
             store: viewport, key: "program.3d.instance.directional.basic",
-            library: viewport.gpu.library!, vertex: "vertex3DInstance",
+            library: viewport.gpu.library, vertex: "vertex3DInstance",
             fragment: "fragmentDirectionalLightFunc",
             vertexFormat: [.float3, .float4, .float2, .float3])
         Program.populateDefaultBlendModes(
             store: viewport, key: "program.3d.instance.directional.texture",
-            library: viewport.gpu.library!, vertex: "vertex3DInstance",
+            library: viewport.gpu.library, vertex: "vertex3DInstance",
             fragment: "fragmentTextureDirectionalLightFunc",
             vertexFormat: [.float3, .float4, .float2, .float3])
         Program.populateDefaultBlendModes(
             store: viewport, key: "program.3d.instance.point.1.basic",
-            library: viewport.gpu.library!, vertex: "vertex3DInstance",
+            library: viewport.gpu.library, vertex: "vertex3DInstance",
             fragment: "fragmentPointLightFunc", vertexFormat: [.float3, .float4, .float2, .float3])
         Program.populateDefaultBlendModes(
             store: viewport, key: "program.3d.instance.point.1.texture",
-            library: viewport.gpu.library!, vertex: "vertex3DInstance",
+            library: viewport.gpu.library, vertex: "vertex3DInstance",
             fragment: "fragmentTexturePointLightFunc",
             vertexFormat: [.float3, .float4, .float2, .float3])
         Program.populateDefaultBlendModes(
             store: viewport, key: "program.3d.instance.point.2.basic",
-            library: viewport.gpu.library!, vertex: "vertex3DInstance",
+            library: viewport.gpu.library, vertex: "vertex3DInstance",
             fragment: "fragmentPoint2LightFunc", vertexFormat: [.float3, .float4, .float2, .float3])
         Program.populateDefaultBlendModes(
             store: viewport, key: "program.3d.instance.point.2.texture",
-            library: viewport.gpu.library!, vertex: "vertex3DInstance",
+            library: viewport.gpu.library, vertex: "vertex3DInstance",
             fragment: "fragmentTexturePoint2LightFunc",
             vertexFormat: [.float3, .float4, .float2, .float3])
         Program.populateDefaultBlendModes(
             store: viewport, key: "program.3d.instance.point.3.basic",
-            library: viewport.gpu.library!, vertex: "vertex3DInstance",
+            library: viewport.gpu.library, vertex: "vertex3DInstance",
             fragment: "fragmentPoint3LightFunc", vertexFormat: [.float3, .float4, .float2, .float3])
         Program.populateDefaultBlendModes(
             store: viewport, key: "program.3d.instance.point.3.texture",
-            library: viewport.gpu.library!, vertex: "vertex3DInstance",
+            library: viewport.gpu.library, vertex: "vertex3DInstance",
             fragment: "fragmentTexturePoint3LightFunc",
             vertexFormat: [.float3, .float4, .float2, .float3])
         Program.populateDefaultBlendModes(
             store: viewport, key: "program.3d.instance.point.4.basic",
-            library: viewport.gpu.library!, vertex: "vertex3DInstance",
+            library: viewport.gpu.library, vertex: "vertex3DInstance",
             fragment: "fragmentPoint4LightFunc", vertexFormat: [.float3, .float4, .float2, .float3])
         Program.populateDefaultBlendModes(
             store: viewport, key: "program.3d.instance.point.4.texture",
-            library: viewport.gpu.library!, vertex: "vertex3DInstance",
+            library: viewport.gpu.library, vertex: "vertex3DInstance",
             fragment: "fragmentTexturePoint4LightFunc",
             vertexFormat: [.float3, .float4, .float2, .float3])
 
         // Height map rendering
         Program.populateDefaultBlendModes(
-            store: viewport, key: "program.3d.height", library: viewport.gpu.library!,
+            store: viewport, key: "program.3d.height", library: viewport.gpu.library,
             vertex: "vertex3DHeightFunc", fragment: "fragmentFunc",
             vertexFormat: [.float3, .float4, .float2, .float3])
         Program.populateDefaultBlendModes(
-            store: viewport, key: "program.3d.directional.height", library: viewport.gpu.library!,
+            store: viewport, key: "program.3d.directional.height", library: viewport.gpu.library,
             vertex: "vertex3DHeightFunc", fragment: "fragmentDirectionalLightFunc",
             vertexFormat: [.float3, .float4, .float2, .float3])
         Program.populateDefaultBlendModes(
-            store: viewport, key: "program.3d.point.1.height", library: viewport.gpu.library!,
+            store: viewport, key: "program.3d.point.1.height", library: viewport.gpu.library,
             vertex: "vertex3DHeightFunc", fragment: "fragmentPointLightFunc",
             vertexFormat: [.float3, .float4, .float2, .float3])
         Program.populateDefaultBlendModes(
-            store: viewport, key: "program.3d.point.2.height", library: viewport.gpu.library!,
+            store: viewport, key: "program.3d.point.2.height", library: viewport.gpu.library,
             vertex: "vertex3DHeightFunc", fragment: "fragmentPoint2LightFunc",
             vertexFormat: [.float3, .float4, .float2, .float3])
         Program.populateDefaultBlendModes(
-            store: viewport, key: "program.3d.point.3.height", library: viewport.gpu.library!,
+            store: viewport, key: "program.3d.point.3.height", library: viewport.gpu.library,
             vertex: "vertex3DHeightFunc", fragment: "fragmentPoint3LightFunc",
             vertexFormat: [.float3, .float4, .float2, .float3])
         Program.populateDefaultBlendModes(
-            store: viewport, key: "program.3d.point.4.height", library: viewport.gpu.library!,
+            store: viewport, key: "program.3d.point.4.height", library: viewport.gpu.library,
             vertex: "vertex3DHeightFunc", fragment: "fragmentPoint4LightFunc",
             vertexFormat: [.float3, .float4, .float2, .float3])
 
         Program.populateDefaultBlendModes(
-            store: viewport, key: "program.3d.height.texture", library: viewport.gpu.library!,
+            store: viewport, key: "program.3d.height.texture", library: viewport.gpu.library,
             vertex: "vertex3DHeightTextureFunc", fragment: "fragmentTextureFunc",
             vertexFormat: [.float3, .float4, .float2, .float3])
         Program.populateDefaultBlendModes(
             store: viewport, key: "program.3d.directional.height.texture",
-            library: viewport.gpu.library!, vertex: "vertex3DHeightTextureFunc",
+            library: viewport.gpu.library, vertex: "vertex3DHeightTextureFunc",
             fragment: "fragmentTextureDirectionalLightFunc",
             vertexFormat: [.float3, .float4, .float2, .float3])
         Program.populateDefaultBlendModes(
             store: viewport, key: "program.3d.point.1.height.texture",
-            library: viewport.gpu.library!, vertex: "vertex3DHeightTextureFunc",
+            library: viewport.gpu.library, vertex: "vertex3DHeightTextureFunc",
             fragment: "fragmentTexturePointLightFunc",
             vertexFormat: [.float3, .float4, .float2, .float3])
         Program.populateDefaultBlendModes(
             store: viewport, key: "program.3d.point.2.height.texture",
-            library: viewport.gpu.library!, vertex: "vertex3DHeightTextureFunc",
+            library: viewport.gpu.library, vertex: "vertex3DHeightTextureFunc",
             fragment: "fragmentTexturePoint2LightFunc",
             vertexFormat: [.float3, .float4, .float2, .float3])
         Program.populateDefaultBlendModes(
             store: viewport, key: "program.3d.point.3.height.texture",
-            library: viewport.gpu.library!, vertex: "vertex3DHeightTextureFunc",
+            library: viewport.gpu.library, vertex: "vertex3DHeightTextureFunc",
             fragment: "fragmentTexturePoint3LightFunc",
             vertexFormat: [.float3, .float4, .float2, .float3])
         Program.populateDefaultBlendModes(
             store: viewport, key: "program.3d.point.4.height.texture",
-            library: viewport.gpu.library!, vertex: "vertex3DHeightTextureFunc",
+            library: viewport.gpu.library, vertex: "vertex3DHeightTextureFunc",
             fragment: "fragmentTexturePoint4LightFunc",
             vertexFormat: [.float3, .float4, .float2, .float3])
 
         // particles rendering
         Program.populateDefaultBlendModes(
-            store: viewport, key: "program.point.3d.basic", library: viewport.gpu.library!,
+            store: viewport, key: "program.point.3d.basic", library: viewport.gpu.library,
             vertex: "point3DFunc", fragment: "fragmentPointFunc",
             vertexFormat: [.float3, .float, .float4])
         Program.populateDefaultBlendModes(
-            store: viewport, key: "program.point.3d.texture", library: viewport.gpu.library!,
+            store: viewport, key: "program.point.3d.texture", library: viewport.gpu.library,
             vertex: "point3DFunc", fragment: "fragmentPointTextureFunc",
             vertexFormat: [.float3, .float, .float4])
         // TODO: implement the illuminations
         Program.populateDefaultBlendModes(
             store: viewport, key: "program.point.3d.directional.basic",
-            library: viewport.gpu.library!, vertex: "point3DFunc", fragment: "fragmentPointFunc",
+            library: viewport.gpu.library, vertex: "point3DFunc", fragment: "fragmentPointFunc",
             vertexFormat: [.float3, .float, .float4])
         Program.populateDefaultBlendModes(
             store: viewport, key: "program.point.3d.directional.texture",
-            library: viewport.gpu.library!, vertex: "point3DFunc",
+            library: viewport.gpu.library, vertex: "point3DFunc",
             fragment: "fragmentPointTextureFunc", vertexFormat: [.float3, .float, .float4])
         Program.populateDefaultBlendModes(
-            store: viewport, key: "program.point.3d.point.1.basic", library: viewport.gpu.library!,
+            store: viewport, key: "program.point.3d.point.1.basic", library: viewport.gpu.library,
             vertex: "point3DFunc", fragment: "fragmentPointFunc",
             vertexFormat: [.float3, .float, .float4])
         Program.populateDefaultBlendModes(
             store: viewport, key: "program.point.3d.point.1.texture",
-            library: viewport.gpu.library!, vertex: "point3DFunc",
+            library: viewport.gpu.library, vertex: "point3DFunc",
             fragment: "fragmentPointTextureFunc", vertexFormat: [.float3, .float, .float4])
         Program.populateDefaultBlendModes(
-            store: viewport, key: "program.point.3d.point.2.basic", library: viewport.gpu.library!,
+            store: viewport, key: "program.point.3d.point.2.basic", library: viewport.gpu.library,
             vertex: "point3DFunc", fragment: "fragmentPointFunc",
             vertexFormat: [.float3, .float, .float4])
         Program.populateDefaultBlendModes(
             store: viewport, key: "program.point.3d.point.2.texture",
-            library: viewport.gpu.library!, vertex: "point3DFunc",
+            library: viewport.gpu.library, vertex: "point3DFunc",
             fragment: "fragmentPointTextureFunc", vertexFormat: [.float3, .float, .float4])
         Program.populateDefaultBlendModes(
-            store: viewport, key: "program.point.3d.point.3.basic", library: viewport.gpu.library!,
+            store: viewport, key: "program.point.3d.point.3.basic", library: viewport.gpu.library,
             vertex: "point3DFunc", fragment: "fragmentPointFunc",
             vertexFormat: [.float3, .float, .float4])
         Program.populateDefaultBlendModes(
             store: viewport, key: "program.point.3d.point.3.texture",
-            library: viewport.gpu.library!, vertex: "point3DFunc",
+            library: viewport.gpu.library, vertex: "point3DFunc",
             fragment: "fragmentPointTextureFunc", vertexFormat: [.float3, .float, .float4])
         Program.populateDefaultBlendModes(
-            store: viewport, key: "program.point.3d.point.4.basic", library: viewport.gpu.library!,
+            store: viewport, key: "program.point.3d.point.4.basic", library: viewport.gpu.library,
             vertex: "point3DFunc", fragment: "fragmentPointFunc",
             vertexFormat: [.float3, .float, .float4])
         Program.populateDefaultBlendModes(
             store: viewport, key: "program.point.3d.point.4.texture",
-            library: viewport.gpu.library!, vertex: "point3DFunc",
+            library: viewport.gpu.library, vertex: "point3DFunc",
             fragment: "fragmentPointTextureFunc", vertexFormat: [.float3, .float, .float4])
     }
 }

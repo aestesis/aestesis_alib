@@ -111,7 +111,7 @@ open class Texture2D: NodeUI, @unchecked Sendable {
     internal func initialize(from cg: CGImage) {
         if cg.alphaInfo != .premultipliedLast {
             do {
-                try self.texture = viewport!.gpu.loader!.newTexture(
+                try self.texture = viewport!.gpu.loader.newTexture(
                     cgImage: cg, options: [.SRGB: false])
                 pixels.width = Double(texture!.width)
                 pixels.height = Double(texture!.height)
@@ -125,7 +125,7 @@ open class Texture2D: NodeUI, @unchecked Sendable {
         let d = MTLTextureDescriptor.texture2DDescriptor(
             pixelFormat: pixfmt, width: cg.width, height: cg.height, mipmapped: false)
         d.usage = .shaderRead
-        self.texture = viewport!.gpu.device?.makeTexture(descriptor: d)
+        self.texture = viewport!.gpu.device.makeTexture(descriptor: d)
         let isize = cg.width * cg.height
         if let data = cg.dataProvider?.data {
             let len = CFDataGetLength(data)
@@ -493,7 +493,7 @@ open class Texture2D: NodeUI, @unchecked Sendable {
             self.cvMetalTexture = cvmt
             self.texture = mt
         } else {
-            self.texture = viewport!.gpu.device?.makeTexture(descriptor: d)
+            self.texture = viewport!.gpu.device.makeTexture(descriptor: d)
         }
     }
     public init(
@@ -517,7 +517,7 @@ open class Texture2D: NodeUI, @unchecked Sendable {
         super.init(parent: parent)
         //self.initialize(from:cg)
         do {
-            try self.texture = viewport!.gpu.loader!.newTexture(cgImage: cg, options: nil)
+            try self.texture = viewport!.gpu.loader.newTexture(cgImage: cg, options: nil)
             pixels.width = Double(texture!.width)
             pixels.height = Double(texture!.height)
             self.scale = scale
