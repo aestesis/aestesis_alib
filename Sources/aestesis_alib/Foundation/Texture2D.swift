@@ -43,10 +43,10 @@ public class TextureCache {
         }
         cache = cvmt!
     }
-    func flush() {
+    public func flush() {
         CVMetalTextureCacheFlush(cache, 0)
     }
-    func createTexture(pixelBuffer: CVPixelBuffer) -> CVMetalTexture? {
+    public func createTexture(pixelBuffer: CVPixelBuffer) -> CVMetalTexture? {
         let width = CVPixelBufferGetWidth(pixelBuffer)
         let height = CVPixelBufferGetHeight(pixelBuffer)
         var cvmt: CVMetalTexture?
