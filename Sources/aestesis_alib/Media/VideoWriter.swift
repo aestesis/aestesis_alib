@@ -224,7 +224,7 @@ public class VideoWriter : @unchecked Sendable {
         case noOptions,videoInputError,audioInputError
     }
     public enum Status : CustomStringConvertible, Equatable {
-        static func == (lhs: VideoWriter.Status, rhs: VideoWriter.Status) -> Bool {
+        public static func == (lhs: VideoWriter.Status, rhs: VideoWriter.Status) -> Bool {
             return lhs.description == rhs.description
         }
         case unknown,writing,completed,cancelled
@@ -243,7 +243,7 @@ public class VideoWriter : @unchecked Sendable {
                 return "Unknown"
             }
         }
-        static func fromWriter(writer:AVAssetWriter) -> Status {
+        public static func fromWriter(writer:AVAssetWriter) -> Status {
             switch writer.status {
             case .writing:
                 return .writing
