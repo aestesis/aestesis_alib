@@ -541,25 +541,25 @@ public struct HSLA : CustomStringConvertible {
         get { return value.w }
         set { value.w = newValue}
     }
-    init(_ hsla:SIMD4<Double>) {
+    public init(_ hsla:SIMD4<Double>) {
         value = hsla
     }
-    init(hsla:SIMD4<Double>) {
+    public init(hsla:SIMD4<Double>) {
         value = hsla
     }
-    init(alpha a:Double=1,hue h:Double,saturation s:Double=1,lightness l:Double=1) {
+    public init(alpha a:Double=1,hue h:Double,saturation s:Double=1,lightness l:Double=1) {
         self.h = h
         self.s = s
         self.l = l
         self.a = a
     }
-    init(a:Double=1,h:Double,s:Double=1,l:Double=1) {
+    public init(a:Double=1,h:Double,s:Double=1,l:Double=1) {
         self.h = h
         self.s = s
         self.l = l
         self.a = a
     }
-    var saturated:HSLA {
+    public var saturated:HSLA {
         let hs = h.truncatingRemainder(dividingBy: 1)
         return HSLA(a:min(1,max(0,a)),h:hs<0 ? hs+1 : hs,s:min(1,max(0,s)),l:min(1,max(0,l)))
     }
@@ -629,22 +629,22 @@ public struct HSBA : CustomStringConvertible {
     init(_ hsba:SIMD4<Double>) {
         value = hsba
     }
-    init(hsba:SIMD4<Double>) {
+    public init(hsba:SIMD4<Double>) {
         value = hsba
     }
-    init(alpha a:Double=1,hue h:Double,saturation s:Double=1,brightness b:Double=1) {
+    public init(alpha a:Double=1,hue h:Double,saturation s:Double=1,brightness b:Double=1) {
         self.h = h
         self.s = s
         self.b = b
         self.a = a
     }
-    init(a:Double=1,h:Double,s:Double=1,b:Double=1) {
+    public init(a:Double=1,h:Double,s:Double=1,b:Double=1) {
         self.h = h
         self.s = s
         self.b = b
         self.a = a
     }
-    var saturated:HSBA {
+    public var saturated:HSBA {
         let hs = h.truncatingRemainder(dividingBy: 1)
         return HSBA(a:min(1,max(0,a)),h:hs<0 ? hs+1 : hs,s:min(1,max(0,s)),b:min(1,max(0,b)))
     }
