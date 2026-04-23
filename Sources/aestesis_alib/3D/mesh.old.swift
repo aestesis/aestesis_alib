@@ -12,7 +12,7 @@ import simd
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 open class MeshOld: NodeRenderer, @unchecked Sendable {
     public let onInitialized = Event<Void>()
-    var initialized = false
+    public var initialized = false
     var needsVerticesUpdate = true
     var bufferVertices: Buffer?
     var needsFacesUpdate = true
