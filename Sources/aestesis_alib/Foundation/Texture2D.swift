@@ -35,7 +35,7 @@ import Metal
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 public class TextureCache {
     var cache: CVMetalTextureCache
-    init(device: MTLDevice) {
+    public init(device: MTLDevice) {
         var cvmt: CVMetalTextureCache?
         let result = CVMetalTextureCacheCreate(kCFAllocatorDefault, nil, device, nil, &cvmt)
         if result != kCVReturnSuccess {
