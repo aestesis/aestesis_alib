@@ -33,7 +33,7 @@ import MetalPerformanceShaders
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 open class SharedBitmap: Bitmap, @unchecked Sendable {
     public private(set) var generandom: Double
-    public func updated() {
+    open func updated() {
         generandom = ß.rnd
     }
     public init(
