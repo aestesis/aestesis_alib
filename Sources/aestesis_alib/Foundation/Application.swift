@@ -126,7 +126,7 @@ public class Application {
             Debug.error("can't convert JSON to text",#file,#line);
         }
     }
-    func secureUrl(string:String,write:Bool = false) -> Foundation.URL? {
+    public func secureUrl(string:String,write:Bool = false) -> Foundation.URL? {
         if let surl = secureUrls[string] {
             return surl
         }
