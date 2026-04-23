@@ -18,7 +18,7 @@ public struct Material {
     var shininess:Double = 2
     var texture:String?
     var transparent : Bool { return blend != .opaque }
-    init(name:String = "default", blend:BlendMode = .opaque, ambient:Color = Color(a:1,l:0.25), diffuse:Color = Color(a:1,l:0.3), specular:Color = Color(a:1,l:0.6), shininess: Double = 2, texture:String? = nil) {
+    public init(name:String = "default", blend:BlendMode = .opaque, ambient:Color = Color(a:1,l:0.25), diffuse:Color = Color(a:1,l:0.3), specular:Color = Color(a:1,l:0.6), shininess: Double = 2, texture:String? = nil) {
         self.name = name
         self.blend = blend
         self.ambient = ambient
