@@ -11,16 +11,16 @@ import Cocoa
 
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-struct AudioDevice {
-    let id: AudioDeviceID
-    let name: String
-    let manufacturer: String
-    let inputChannels: [String]
-    let outputChannels: [String]
+public struct AudioDevice {
+    public let id: AudioDeviceID
+    public let name: String
+    public let manufacturer: String
+    public let inputChannels: [String]
+    public let outputChannels: [String]
 
     // https://developer.apple.com/forums/thread/71008
     // https://forum.juce.com/t/how-to-fix-the-channel-names-of-coreaudio-devices/12349
-    func open(leftChannel: Int, rightChannel: Int = -1, fps: Double = 60) throws -> Stream<Float> {
+    public func open(leftChannel: Int, rightChannel: Int = -1, fps: Double = 60) throws -> Stream<Float> {
         // TODO: debug, suxx if selected input not the same than system default input
         // forum https://forums.developer.apple.com/forums/thread/71008
         let engine = AVAudioEngine()
@@ -114,7 +114,7 @@ struct AudioDevice {
     // audio engine https://developer.apple.com/documentation/avfaudio/avaudioengine
     // audio sink https://developer.apple.com/documentation/avfaudio/avaudiosinknode
 
-    static var devices: [AudioDevice] {
+    public static var devices: [AudioDevice] {
         var devices = [AudioDevice]()
         var propertySize: UInt32 = 0
         var status: OSStatus = noErr
@@ -280,16 +280,16 @@ struct AudioDevice {
         return devices
     }
 
-    static func getDevice(id: Int64) -> AudioDevice? {
+    public static func getDevice(id: Int64) -> AudioDevice? {
         return devices.first(where: { $0.id == id })
     }
 
-    static func getDevice(name: String) -> AudioDevice? {
+    public static func getDevice(name: String) -> AudioDevice? {
         return devices.first(where: { $0.name == name })
     }
 }
 
-enum AudioError: Swift.Error {
+public enum AudioError: Swift.Error {
     case audioUnitError
     case audioConverterError
     case channelError
