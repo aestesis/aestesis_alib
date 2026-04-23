@@ -5,15 +5,15 @@
 //  Created by renan jegouzo on 18/02/2024.
 //
 
-import Foundation
 import AVFoundation
+import Foundation
 
 public class VideoStreamer {
-    func Connect(url:String,name:String) { // "rtmp://waves/live/stream"
-        
+    public init() {}
+    func Connect(url: String, name: String) {  // "rtmp://waves/live/stream"
+
     }
-    
     func stop() {
-        
+
     }
 }
