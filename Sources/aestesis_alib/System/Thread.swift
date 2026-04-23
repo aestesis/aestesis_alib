@@ -216,13 +216,13 @@ where TK: Sendable & Hashable {
         label: "SynchronizedDictionaryAccess", qos: .userInteractive, attributes: .concurrent)
     private var dictionary: [TK: TV]
 
-    var keys: Dictionary<TK, TV>.Keys {
+    public var keys: Dictionary<TK, TV>.Keys {
         self.accessQueue.sync {
             return self.dictionary.keys
         }
     }
 
-    var values: Dictionary<TK, TV>.Values {
+    public var values: Dictionary<TK, TV>.Values {
         self.accessQueue.sync {
             return self.dictionary.values
         }
