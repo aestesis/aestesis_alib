@@ -134,7 +134,7 @@ open class Object: Node3D, @unchecked Sendable {
 public struct Instance {
     public var matrix: Mat4
     public var color: Color
-    init(matrix: Mat4 = .identity, color: Color = .white) {
+    public init(matrix: Mat4 = .identity, color: Color = .white) {
         self.matrix = matrix
         self.color = color
     }
