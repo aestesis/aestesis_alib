@@ -211,8 +211,8 @@ public class FFT {
         return Result(amplitude: amp, phase: pha)
     }
     public struct Result {
-        let amplitude: [Float]
-        let phase: [Float]
+        public let amplitude: [Float]
+        public let phase: [Float]
         init(amplitude: [Float] = [], phase: [Float] = []) {
             self.amplitude = amplitude
             self.phase = phase
