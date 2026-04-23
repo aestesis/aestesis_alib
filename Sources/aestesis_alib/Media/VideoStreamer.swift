@@ -8,7 +8,7 @@
 import Foundation
 import AVFoundation
 
-class VideoStreamer {
+public class VideoStreamer {
     func Connect(url:String,name:String) { // "rtmp://waves/live/stream"
         
     }
