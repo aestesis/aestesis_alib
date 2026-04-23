@@ -100,7 +100,7 @@ public class Application {
         }
     }
     #endif
-    var secureUrls = SynchronizedDictionnary<String,Foundation.URL>()
+    public var secureUrls = SynchronizedDictionnary<String,Foundation.URL>()
     deinit {
         for url in secureUrls.values {
             url.stopAccessingSecurityScopedResource()
