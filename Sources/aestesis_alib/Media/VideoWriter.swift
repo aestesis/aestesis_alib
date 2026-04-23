@@ -14,45 +14,51 @@ import Foundation
 
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-public class VideoWriter : @unchecked Sendable {
+public class VideoWriter: @unchecked Sendable {
     let queue: DispatchQueue = DispatchQueue(label: "VideoWriter", qos: .utility)
     public let onChanged = Event<Status>()
     public enum Option {
-        case audio,video
+        case audio, video
     }
     let url: URL
     let fps: Double
-    
+
     let writer: AVAssetWriter
     var audioInput: AVAssetWriterInput?
     var videoInput: AVAssetWriterInput?
-    
-    let timeScale:Int32 = 1000
-    var startTime:Double?
-    var videoFrames:Int = 0
-    var audioSamples:Int = 0
-    public var currentTime:Double {
+
+    let timeScale: Int32 = 1000
+    var startTime: Double?
+    var videoFrames: Int = 0
+    var audioSamples: Int = 0
+    public var currentTime: Double {
         guard let startTime = startTime else { return 0 }
         return ß.time - startTime
     }
-    
-    public var status:Status {
+
+    public var status: Status {
         return Status.fromWriter(writer: writer)
     }
-    
-    var audioStreamBasicDescription : AudioStreamBasicDescription {
+
+    var audioStreamBasicDescription: AudioStreamBasicDescription {
         let nchan = 2
-        let bytesPerChannel=MemoryLayout<Float>.size
-        let bytesPerPacket=nchan*bytesPerChannel
-        return AudioStreamBasicDescription(mSampleRate: 44100, mFormatID: kAudioFormatLinearPCM , mFormatFlags: kLinearPCMFormatFlagIsFloat | kAudioFormatFlagIsPacked | kAudioFormatFlagsNativeEndian, mBytesPerPacket: UInt32(bytesPerPacket), mFramesPerPacket: 1, mBytesPerFrame: UInt32(bytesPerPacket), mChannelsPerFrame: UInt32(nchan), mBitsPerChannel: UInt32(bytesPerChannel*8), mReserved: 0)
+        let bytesPerChannel = MemoryLayout<Float>.size
+        let bytesPerPacket = nchan * bytesPerChannel
+        return AudioStreamBasicDescription(
+            mSampleRate: 44100, mFormatID: kAudioFormatLinearPCM,
+            mFormatFlags: kLinearPCMFormatFlagIsFloat | kAudioFormatFlagIsPacked
+                | kAudioFormatFlagsNativeEndian, mBytesPerPacket: UInt32(bytesPerPacket),
+            mFramesPerPacket: 1, mBytesPerFrame: UInt32(bytesPerPacket),
+            mChannelsPerFrame: UInt32(nchan), mBitsPerChannel: UInt32(bytesPerChannel * 8),
+            mReserved: 0)
     }
-    
-    var isBigEndian : Bool {
-        let number: UInt32 = 0x12345678
-        return  number == number.bigEndian
+
+    var isBigEndian: Bool {
+        let number: UInt32 = 0x1234_5678
+        return number == number.bigEndian
     }
-    
-    public init(url: URL, size: Size = .zero, fps: Double = 0, options:[Option] = [] ) throws {
+
+    public init(url: URL, size: Size = .zero, fps: Double = 0, options: [Option] = []) throws {
         if options.isEmpty {
             throw Error.noOptions
         }
@@ -60,9 +66,9 @@ public class VideoWriter : @unchecked Sendable {
         self.fps = fps
         let writer = try AVAssetWriter(outputURL: url, fileType: .mov)
         self.writer = writer
-        
+
         // presets: AVOutputSettingsAssistant
-        
+
         if options.contains(element: .audio) {
             audioInput = try AVAssetWriterInput(
                 mediaType: .audio,
@@ -73,8 +79,10 @@ public class VideoWriter : @unchecked Sendable {
                     AVLinearPCMIsBigEndianKey: isBigEndian,
                     AVLinearPCMIsFloatKey: true,
                     AVLinearPCMBitDepthKey: 32,
-                    AVLinearPCMIsNonInterleaved: false
-                ],sourceFormatHint: CMFormatDescription(audioStreamBasicDescription: audioStreamBasicDescription))
+                    AVLinearPCMIsNonInterleaved: false,
+                ],
+                sourceFormatHint: CMFormatDescription(
+                    audioStreamBasicDescription: audioStreamBasicDescription))
             audioInput!.expectsMediaDataInRealTime = true
             guard writer.canAdd(audioInput!) else {
                 Debug.error("VideoWriter can't add audio input")
@@ -82,7 +90,7 @@ public class VideoWriter : @unchecked Sendable {
             }
             writer.add(audioInput!)
         }
-        
+
         if options.contains(element: .video) {
             videoInput = AVAssetWriterInput(
                 mediaType: .video,
@@ -91,7 +99,7 @@ public class VideoWriter : @unchecked Sendable {
                     AVVideoWidthKey: size.width,
                     AVVideoHeightKey: size.height,
                     AVVideoCompressionPropertiesKey: [
-                        AVVideoAverageBitRateKey: size.surface * fps * 0.11,    // ~ 11% of the surface = 13.5MB/s at 1080p 60fps
+                        AVVideoAverageBitRateKey: size.surface * fps * 0.11,  // ~ 11% of the surface = 13.5MB/s at 1080p 60fps
                         AVVideoExpectedSourceFrameRateKey: fps,
                         AVVideoMaxKeyFrameIntervalKey: fps,
                     ],
@@ -106,9 +114,9 @@ public class VideoWriter : @unchecked Sendable {
         }
         onChanged.dispatch(self.status)
     }
-    
+
     func start() -> Bool {
-        var r:Bool = false
+        var r: Bool = false
         queue.sync {
             startTime = nil
             r = writer.startWriting()
@@ -116,11 +124,11 @@ public class VideoWriter : @unchecked Sendable {
         }
         return r
     }
-    
+
     deinit {
         Debug.info("VideoWriter released")
     }
-    
+
     public func stop() {
         queue.sync {
             let lock = DispatchGroup()
@@ -134,33 +142,36 @@ public class VideoWriter : @unchecked Sendable {
             self.onChanged.dispatch(self.status)
         }
     }
-    
+
     public func close() {
         self.onChanged.removeAll()
     }
-    
+
     private func startSession() {
-        self.writer.startSession(atSourceTime: CMTime(seconds: 0, preferredTimescale: self.timeScale))
+        self.writer.startSession(
+            atSourceTime: CMTime(seconds: 0, preferredTimescale: self.timeScale))
         self.startTime = ß.time
         self.videoFrames = 0
         self.audioSamples = 0
         self.onChanged.dispatch(self.status)
     }
-    
-    public func write(pixels:CVPixelBuffer) {
+
+    public func write(pixels: CVPixelBuffer) {
         queue.async { [weak self] in
             self?.queuedWrite(pixels: pixels)
         }
     }
-    private func queuedWrite(pixels:CVPixelBuffer) {
+    private func queuedWrite(pixels: CVPixelBuffer) {
         if startTime == nil {
             startSession()
         }
         guard let videoInput = videoInput, videoInput.isReadyForMoreMediaData else { return }
         do {
-            let time = CMTime(value: Int64(Double(timeScale)*Double(videoFrames)/fps), timescale: timeScale)
-            let duration = CMTime(value: Int64(Double(timeScale)/fps), timescale: timeScale)
-            let timing = CMSampleTimingInfo(duration: duration, presentationTimeStamp: time, decodeTimeStamp: time)
+            let time = CMTime(
+                value: Int64(Double(timeScale) * Double(videoFrames) / fps), timescale: timeScale)
+            let duration = CMTime(value: Int64(Double(timeScale) / fps), timescale: timeScale)
+            let timing = CMSampleTimingInfo(
+                duration: duration, presentationTimeStamp: time, decodeTimeStamp: time)
             // https://forums.developer.apple.com/forums/thread/92020
             let videoBuffer = try videoSampleBuffer(timing: timing, pixels: pixels)
             videoInput.append(videoBuffer)
@@ -174,13 +185,16 @@ public class VideoWriter : @unchecked Sendable {
             onChanged.dispatch(self.status)
         }
     }
-    
-    private func videoSampleBuffer(timing: CMSampleTimingInfo, pixels:CVPixelBuffer) throws -> CMSampleBuffer {
+
+    private func videoSampleBuffer(timing: CMSampleTimingInfo, pixels: CVPixelBuffer) throws
+        -> CMSampleBuffer
+    {
         let format = try CMVideoFormatDescription(imageBuffer: pixels)
-        let buffer = try CMSampleBuffer(imageBuffer: pixels, formatDescription: format, sampleTiming: timing)
+        let buffer = try CMSampleBuffer(
+            imageBuffer: pixels, formatDescription: format, sampleTiming: timing)
         return buffer
     }
-    
+
     public func write(pcm: [Float]) {
         queue.async { [weak self] in
             self?.queudWrite(pcm: pcm)
@@ -193,9 +207,12 @@ public class VideoWriter : @unchecked Sendable {
         guard audioInput?.isReadyForMoreMediaData ?? false else { return }
         do {
             let nsamples = pcm.count / 2
-            let time = CMTime(value: Int64(Int(timeScale)*audioSamples/44100), timescale: timeScale)
-            let duration = CMTime(value: Int64(Int(timeScale)*nsamples/44100), timescale: timeScale)
-            let timing = CMSampleTimingInfo(duration: duration, presentationTimeStamp: time, decodeTimeStamp: time)
+            let time = CMTime(
+                value: Int64(Int(timeScale) * audioSamples / 44100), timescale: timeScale)
+            let duration = CMTime(
+                value: Int64(Int(timeScale) * nsamples / 44100), timescale: timeScale)
+            let timing = CMSampleTimingInfo(
+                duration: duration, presentationTimeStamp: time, decodeTimeStamp: time)
             let audioBuffer = try audioSampleBuffer(timing: timing, pcm: pcm)
             audioInput?.append(audioBuffer)
             if status != .writing {
@@ -208,27 +225,33 @@ public class VideoWriter : @unchecked Sendable {
             onChanged.dispatch(self.status)
         }
     }
-    private func audioSampleBuffer(timing: CMSampleTimingInfo, pcm: [Float]) throws -> CMSampleBuffer {
-        let format = try CMFormatDescription(audioStreamBasicDescription: audioStreamBasicDescription)
+    private func audioSampleBuffer(timing: CMSampleTimingInfo, pcm: [Float]) throws
+        -> CMSampleBuffer
+    {
+        let format = try CMFormatDescription(
+            audioStreamBasicDescription: audioStreamBasicDescription)
         // https://developer.apple.com/documentation/coremedia/cmblockbuffer
         // TODO: check https://gist.github.com/aibo-cora/c57d1a4125e145e586ecb61ebecff47c
-        let byteCount = pcm.count*MemoryLayout<Float>.stride
-        let ptr = UnsafeMutableRawBufferPointer.allocate(byteCount: byteCount, alignment: MemoryLayout<Float>.alignment)
+        let byteCount = pcm.count * MemoryLayout<Float>.stride
+        let ptr = UnsafeMutableRawBufferPointer.allocate(
+            byteCount: byteCount, alignment: MemoryLayout<Float>.alignment)
         ptr.baseAddress!.copyMemory(from: pcm, byteCount: byteCount)
         let block = try CMBlockBuffer(buffer: ptr, allocator: kCFAllocatorDefault)
-        let buffer = try CMSampleBuffer(dataBuffer: block, formatDescription: format, numSamples: 1, sampleTimings: [timing], sampleSizes: [pcm.count])
+        let buffer = try CMSampleBuffer(
+            dataBuffer: block, formatDescription: format, numSamples: 1, sampleTimings: [timing],
+            sampleSizes: [pcm.count])
         return buffer
     }
-    
-    public enum Error : Swift.Error {
-        case noOptions,videoInputError,audioInputError
+
+    public enum Error: Swift.Error {
+        case noOptions, videoInputError, audioInputError
     }
-    public enum Status : CustomStringConvertible, Equatable {
+    public enum Status: CustomStringConvertible, Equatable {
         public static func == (lhs: VideoWriter.Status, rhs: VideoWriter.Status) -> Bool {
             return lhs.description == rhs.description
         }
-        case unknown,writing,completed,cancelled
-        case failed(error:Swift.Error)
+        case unknown, writing, completed, cancelled
+        case failed(error: Swift.Error)
         public var description: String {
             switch self {
             case .writing:
@@ -243,14 +266,14 @@ public class VideoWriter : @unchecked Sendable {
                 return "Unknown"
             }
         }
-        public static func fromWriter(writer:AVAssetWriter) -> Status {
+        public static func fromWriter(writer: AVAssetWriter) -> Status {
             switch writer.status {
             case .writing:
                 return .writing
             case .completed:
                 return .completed
             case .failed:
-                return .failed(error:writer.error!)
+                return .failed(error: writer.error!)
             case .cancelled:
                 return .cancelled
             default:

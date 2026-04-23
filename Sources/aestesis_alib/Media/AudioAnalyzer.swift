@@ -185,8 +185,8 @@ public class AudioAnalyzer: Atom, @unchecked Sendable {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 public class FFT {
     var dsp: vDSP.DiscreteFourierTransform<Float>?
-    var imaginary: [Float]?
-    init(count: Int) {
+    var imaginary: [Float] = []
+    public init(count: Int) {
         do {
             dsp = try vDSP.DiscreteFourierTransform(
                 count: count, direction: .forward, transformType: .complexComplex,
@@ -196,8 +196,8 @@ public class FFT {
             Debug.error("error initializing FFT DSP \(error)")
         }
     }
-    func transform(samples: [Float]) -> Result? {
-        guard let dsp = dsp, let imaginary = imaginary else { return nil }
+    public func transform(samples: [Float]) -> Result? {
+        guard let dsp = dsp else { return nil }
         let normalized = samples.map { $0 / Float(samples.count) }
         let result = dsp.transform(real: normalized, imaginary: imaginary)
         var amp: [Float] = []
