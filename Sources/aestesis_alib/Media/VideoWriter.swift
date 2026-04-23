@@ -16,8 +16,8 @@ import Foundation
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 public class VideoWriter : @unchecked Sendable {
     let queue: DispatchQueue = DispatchQueue(label: "VideoWriter", qos: .utility)
-    let onChanged = Event<Status>()
-    enum Option {
+    public let onChanged = Event<Status>()
+    public enum Option {
         case audio,video
     }
     let url: URL
@@ -31,7 +31,7 @@ public class VideoWriter : @unchecked Sendable {
     var startTime:Double?
     var videoFrames:Int = 0
     var audioSamples:Int = 0
-    var currentTime:Double {
+    public var currentTime:Double {
         guard let startTime = startTime else { return 0 }
         return ß.time - startTime
     }
