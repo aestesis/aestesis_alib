@@ -11,11 +11,11 @@ import IOKit
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 #if os(iOS)
-  func memoryMbUsed() -> Double {
+  public func memoryMbUsed() -> Double {
     return 0
   }
 #else
-  func memoryMbUsed() -> Double {
+  public func memoryMbUsed() -> Double {
     // The `TASK_VM_INFO_COUNT` and `TASK_VM_INFO_REV1_COUNT` macros are too
     // complex for the Swift C importer, so we have to define them ourselves.
     let TASK_VM_INFO_COUNT = mach_msg_type_number_t(
