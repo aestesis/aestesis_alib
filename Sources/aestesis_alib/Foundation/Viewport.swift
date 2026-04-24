@@ -506,7 +506,8 @@ public class Viewport: NodeUI, @unchecked Sendable {
         super.init(parent: nil)
         Debug.warning("Viewport.init(\(size))  orientation:\(self.orientation)")
         _gpu = GPU(
-            device: device, library: ProgramLibrary(parent: self, filename: "default"),
+            device: device,
+            library: ProgramLibrary(parent: self, device: device, filename: "default"),
             loader: MTKTextureLoader(device: device), buffers: Buffers(viewport: self))
         _size = size
         Graphics.globals(self)

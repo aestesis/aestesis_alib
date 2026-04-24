@@ -711,13 +711,15 @@ public class Buffers: NodeUI, @unchecked Sendable {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 public class ProgramLibrary: NodeUI, @unchecked Sendable {
     var lib: MTLLibrary?
-    public init(parent: NodeUI, bundle: Bundle? = nil, filename: String = "default") {
+    public init(
+        parent: NodeUI, device: MTLDevice, bundle: Bundle? = nil, filename: String = "default"
+    ) {
         super.init(parent: parent)
         let b = bundle ?? Bundle.alib
         let libpath = b.path(forResource: filename, ofType: "metallib")
         if let libpath = libpath {
             do {
-                lib = try viewport!.gpu.device.makeLibrary(URL: Foundation.URL(string: libpath)!)
+                lib = try device.makeLibrary(URL: Foundation.URL(string: libpath)!)
             } catch {
                 Debug.error(
                     "can't load metal library \(filename).metallib in \(b.bundleURL)"
