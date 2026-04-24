@@ -232,10 +232,14 @@ open class Texture2D: NodeUI, @unchecked Sendable {
                         "can't load texture: \(filename), Texture already detached (no viewport)",
                         #file, #line)
                 } else {
-                    Debug.error("can't load texture: \(filename), file not found)", #file, #line)
+                    Debug.error(
+                        "can't load texture: \(filename), file not found in bundle \(bundle.bundleURL)",
+                        #file, #line)
                 }
             } else {
-                Debug.error("can't load texture: \(filename), file not found)", #file, #line)
+                Debug.error(
+                    "can't load texture: \(filename), file not found in bundle \(bundle.bundleURL)",
+                    #file, #line)
             }
         #else
             if let ns = NSImage(contentsOfFile: Application.resourcePath(filename, bundle: bundle)),
@@ -248,10 +252,14 @@ open class Texture2D: NodeUI, @unchecked Sendable {
                         "can't load texture: \(filename), Texture detached (no viewport)", #file,
                         #line)
                 } else {
-                    Debug.error("can't load texture: \(filename), file not found)", #file, #line)
+                    Debug.error(
+                        "can't load texture: \(filename), file not found in bundle \(bundle.bundleURL)",
+                        #file, #line)
                 }
             } else {
-                Debug.error("can't load texture: \(filename), file not found)", #file, #line)
+                Debug.error(
+                    "can't load texture: \(filename), file not found in bundle \(bundle.bundleURL)",
+                    #file, #line)
             }
         #endif
         // decode displaysize&scale from filename eg:  filename.134x68.png -> display=Size(134,68)
