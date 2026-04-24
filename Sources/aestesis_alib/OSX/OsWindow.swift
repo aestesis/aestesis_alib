@@ -35,7 +35,7 @@
         public var onStartUI = Event<Viewport>()
         var del: OsWindowDelegate?
         var view: OsView?
-        var ratio: Double?
+        public var ratio: Double?
         public var rootView: View? {
             return view?.viewport?.rootView
         }
