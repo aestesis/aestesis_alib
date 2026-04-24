@@ -48,7 +48,7 @@
         var destroy = false
         //////////////////////////////////////////////////////////////////////////////////////////////////////////
         //////////////////////////////////////////////////////////////////////////////////////////////////////////
-        init(frame: CGRect, device: MTLDevice?, threads: Bool = true) {
+        public init(frame: CGRect, device: MTLDevice?, threads: Bool = true) {
             self.threads = threads
             del = OsViewDelegate(threads: threads)
             super.init(frame: frame, device: device)
