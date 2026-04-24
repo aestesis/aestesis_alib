@@ -52,49 +52,49 @@ public class AudioAnalyzer: Atom, @unchecked Sendable {
         let lenght = (count > 0) ? count : buffer.count - offset
         let cmedium: Float = max(min(1.0, coamp * 10.0), 0.5)
         let ctreeble: Float = max(min(1.0, coamp * 20.0), 0.5)
-        nonisolated(unsafe) var b: Float = 0
-        nonisolated(unsafe) var m: Float = 0
-        nonisolated(unsafe) var t: Float = 0
-        nonisolated(unsafe) var samples = self.samples
-        nonisolated(unsafe) var bass = self.bass
-        nonisolated(unsafe) var medium = self.medium
-        nonisolated(unsafe) var treeble = self.treeble
-        nonisolated(unsafe) var ma: Float = 0
-        assert(samples.count == AudioAnalyzer.samplesCount)
-        assert(bass.count == AudioAnalyzer.samplesCount)
-        assert(medium.count == AudioAnalyzer.samplesCount)
-        assert(treeble.count == AudioAnalyzer.samplesCount)
-        for i in 0..<lenght {
-            let vs = buffer[offset + i]
-            let vcs = vs * coamp
-            let va = abs(vs)
-            let vca = va * coamp
-            samples.append(vcs)
-            ma = max(ma, vca)
-            current.low = current.low * 0.9 + vcs * 0.1
-            current.medium = current.medium * 0.7 + (vcs - current.low) * 0.3
-            current.high = vcs - current.medium - current.low
-            bass.append(current.low)
-            medium.append(current.medium * cmedium)
-            treeble.append(current.high * ctreeble)
-            b = max(b, abs(current.low))
-            m = max(m, abs(current.medium * cmedium))
-            t = max(t, abs(current.high * ctreeble))
-        }
-        samples = Array(samples[samples.count - AudioAnalyzer.samplesCount..<samples.count])
-        bass = Array(bass[bass.count - AudioAnalyzer.samplesCount..<bass.count])
-        medium = Array(medium[medium.count - AudioAnalyzer.samplesCount..<medium.count])
-        treeble = Array(treeble[treeble.count - AudioAnalyzer.samplesCount..<treeble.count])
-        nonisolated(unsafe) let fft =
-            fftProcessor.transform(samples: samples)
-            ?? FFT.Result(count: AudioAnalyzer.samplesCount / 2)
-        nonisolated(unsafe) var enveloppe: Double = 0
-        for e in fft.amplitude {
-            enveloppe += Double(e)
-        }
-        enveloppe /= Double(fft.amplitude.count)
         lock.async { [weak self] in
             guard let self = self else { return }
+            nonisolated(unsafe) var b: Float = 0
+            nonisolated(unsafe) var m: Float = 0
+            nonisolated(unsafe) var t: Float = 0
+            nonisolated(unsafe) var samples = self.samples
+            nonisolated(unsafe) var bass = self.bass
+            nonisolated(unsafe) var medium = self.medium
+            nonisolated(unsafe) var treeble = self.treeble
+            nonisolated(unsafe) var ma: Float = 0
+            assert(samples.count == AudioAnalyzer.samplesCount)
+            assert(bass.count == AudioAnalyzer.samplesCount)
+            assert(medium.count == AudioAnalyzer.samplesCount)
+            assert(treeble.count == AudioAnalyzer.samplesCount)
+            for i in 0..<lenght {
+                let vs = buffer[offset + i]
+                let vcs = vs * coamp
+                let va = abs(vs)
+                let vca = va * coamp
+                samples.append(vcs)
+                ma = max(ma, vca)
+                current.low = current.low * 0.9 + vcs * 0.1
+                current.medium = current.medium * 0.7 + (vcs - current.low) * 0.3
+                current.high = vcs - current.medium - current.low
+                bass.append(current.low)
+                medium.append(current.medium * cmedium)
+                treeble.append(current.high * ctreeble)
+                b = max(b, abs(current.low))
+                m = max(m, abs(current.medium * cmedium))
+                t = max(t, abs(current.high * ctreeble))
+            }
+            samples = Array(samples[samples.count - AudioAnalyzer.samplesCount..<samples.count])
+            bass = Array(bass[bass.count - AudioAnalyzer.samplesCount..<bass.count])
+            medium = Array(medium[medium.count - AudioAnalyzer.samplesCount..<medium.count])
+            treeble = Array(treeble[treeble.count - AudioAnalyzer.samplesCount..<treeble.count])
+            nonisolated(unsafe) let fft =
+                fftProcessor.transform(samples: samples)
+                ?? FFT.Result(count: AudioAnalyzer.samplesCount / 2)
+            nonisolated(unsafe) var enveloppe: Double = 0
+            for e in fft.amplitude {
+                enveloppe += Double(e)
+            }
+            enveloppe /= Double(fft.amplitude.count)
             self.timestamp += lenght
             if ma > 0 {
                 self.coamp = min(self.coamp * 0.99 + (self.impact / ma) * 0.01, self.maxAmp)
