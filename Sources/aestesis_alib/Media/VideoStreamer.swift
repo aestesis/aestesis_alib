@@ -10,10 +10,10 @@ import Foundation
 
 public class VideoStreamer {
     public init() {}
-    func Connect(url: String, name: String) {  // "rtmp://waves/live/stream"
+    public func Connect(url: String, name: String) {  // "rtmp://waves/live/stream"
 
     }
-    func stop() {
+    public func stop() {
 
     }
 }
