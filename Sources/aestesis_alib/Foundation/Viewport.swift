@@ -88,9 +88,7 @@ public class Viewport: NodeUI, @unchecked Sendable {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public var orientation: Orientation {
-        return DispatchQueue.main.sync {
-            return systemView.orientation
-        }
+        return systemView.orientation
     }
     public var safeArea: EdgeInsets {
         #if os(iOS)
@@ -458,9 +456,7 @@ public class Viewport: NodeUI, @unchecked Sendable {
             if focus {
                 focusedView = view
                 view.onFocus.dispatch(true)
-                DispatchQueue.main.async {
-                    self.systemView.focus()
-                }
+                self.systemView.focus()
             }
         } else if !focus && view == focusedView {
             focusedView = nil
