@@ -23,6 +23,9 @@ let package = Package(
         .target(
             name: "aestesis_alib",
             dependencies: ["libtess"],
+            resources: [
+                .process("shaders/default.metal")
+            ]
         ),
         .testTarget(
             name: "aestesis_alibTests",
