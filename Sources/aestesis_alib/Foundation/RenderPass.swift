@@ -711,18 +711,23 @@ public class Buffers: NodeUI, @unchecked Sendable {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 public class ProgramLibrary: NodeUI, @unchecked Sendable {
     var lib: MTLLibrary?
-    public init(parent: NodeUI, filename: String = "default") {
+    public init(parent: NodeUI, bundle: Bundle? = nil, filename: String = "default") {
         super.init(parent: parent)
-        Debug.info("alib bundle \(Bundle.alib.bundleURL)")
-        let metalBundlePath = Bundle.alib.path(forResource: "MetalDefaultShaders", ofType: "bundle")!
-        let metalBundle = Bundle(path: metalBundlePath)!
-        let libpath = metalBundle.path(forResource: filename, ofType: "metallib")!
-        do {
-            lib = try viewport!.gpu.device.makeLibrary(URL: Foundation.URL(string: libpath)!)
-        } catch {
+        let b = bundle ?? Bundle.alib
+        let libpath = b.path(forResource: filename, ofType: "metallib")
+        if let libpath = libpath {
+            do {
+                lib = try viewport!.gpu.device.makeLibrary(URL: Foundation.URL(string: libpath)!)
+            } catch {
+                Debug.error(
+                    "can't load metal library \(filename).metallib in \(b.bundleURL)"
+                )
+            }
+        } else {
             Debug.error(
-                "can't load metal library \(filename) in \(metalBundle.infoDictionary!["CFBundleName"]!)"
+                "can't find metal library \(filename).metallib in \(b.bundleURL)"
             )
+
         }
     }
 }
