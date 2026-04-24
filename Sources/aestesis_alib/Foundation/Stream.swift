@@ -134,7 +134,7 @@ public class Stream<T>: Atom, @unchecked Sendable {
         Debug.notImplemented()
         return 0
     }
-    init(
+    public init(
         timeout: Double = 5, data: (() -> Void)? = nil, free: (() -> Void)? = nil,
         error: ((Error) -> Void)? = nil
     ) {
