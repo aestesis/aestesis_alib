@@ -35,7 +35,7 @@
     public var viewport: Viewport?
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    override init(frame: CGRect, device: MTLDevice?) {
+    public override init(frame: CGRect, device: MTLDevice?) {
       super.init(frame: frame, device: device)
       self.isMultipleTouchEnabled = true
       self.depthStencilPixelFormat = .depth32Float
