@@ -713,8 +713,8 @@ public class ProgramLibrary: NodeUI, @unchecked Sendable {
     var lib: MTLLibrary?
     public init(parent: NodeUI, filename: String = "default") {
         super.init(parent: parent)
-        let alibBundle = Bundle(for: Viewport.self)
-        let metalBundlePath = alibBundle.path(forResource: "MetalDefaultShaders", ofType: "bundle")!
+        Debug.info("alib bundle \(Bundle.alib.bundleURL)")
+        let metalBundlePath = Bundle.alib.path(forResource: "MetalDefaultShaders", ofType: "bundle")!
         let metalBundle = Bundle(path: metalBundlePath)!
         let libpath = metalBundle.path(forResource: filename, ofType: "metallib")!
         do {
