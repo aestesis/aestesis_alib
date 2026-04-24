@@ -38,7 +38,7 @@
         //////////////////////////////////////////////////////////////////////////////////////////////////////////
         public var onStartUI = Event<Viewport>()
         let threads: Bool
-        var viewport: Viewport?
+        public var viewport: Viewport?
         var del: OsViewDelegate?
         let lock = Lock()
         var mTouches = [[TouchLocation]]()
