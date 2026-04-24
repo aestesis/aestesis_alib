@@ -20,8 +20,8 @@ public class VideoWriter: @unchecked Sendable {
     public enum Option {
         case audio, video
     }
-    let url: URL
-    let fps: Double
+    public let url: URL
+    public let fps: Double
 
     let writer: AVAssetWriter
     var audioInput: AVAssetWriterInput?
@@ -115,7 +115,7 @@ public class VideoWriter: @unchecked Sendable {
         onChanged.dispatch(self.status)
     }
 
-    func start() -> Bool {
+    public func start() -> Bool {
         var r: Bool = false
         queue.sync {
             startTime = nil
