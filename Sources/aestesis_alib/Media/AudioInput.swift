@@ -74,7 +74,7 @@ public struct AudioDevice {
                     pcmFormat: inputFormat, bufferListNoCopy: audioBufferList)
             else {
                 Debug.warning("AVAudioPCMBuffer format mismatch")
-                stream.close()  // new: added 2024.08.02, needs verifying if working
+                //stream.close()  
                 return noErr
             }
             let inputBlock: AVAudioConverterInputBlock = { inNumPackets, outStatus in
