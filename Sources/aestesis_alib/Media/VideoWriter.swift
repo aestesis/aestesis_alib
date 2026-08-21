@@ -49,6 +49,7 @@ public class VideoWriter: @unchecked Sendable {
             mFormatFlags: kLinearPCMFormatFlagIsFloat | kAudioFormatFlagIsPacked
                 | kAudioFormatFlagsNativeEndian, mBytesPerPacket: UInt32(bytesPerPacket),
             mFramesPerPacket: 1, mBytesPerFrame: UInt32(bytesPerPacket),
+            
             mChannelsPerFrame: UInt32(nchan), mBitsPerChannel: UInt32(bytesPerChannel * 8),
             mReserved: 0)
     }
@@ -226,23 +227,21 @@ public class VideoWriter: @unchecked Sendable {
         }
     }
     private func audioSampleBuffer(timing: CMSampleTimingInfo, pcm: [Float]) throws
-        -> CMSampleBuffer
+    -> CMSampleBuffer
     {
         let format = try CMFormatDescription(
             audioStreamBasicDescription: audioStreamBasicDescription)
         // https://developer.apple.com/documentation/coremedia/cmblockbuffer
-        // TODO: check https://gist.github.com/aibo-cora/c57d1a4125e145e586ecb61ebecff47c
         let byteCount = pcm.count * MemoryLayout<Float>.stride
         let ptr = UnsafeMutableRawBufferPointer.allocate(
             byteCount: byteCount, alignment: MemoryLayout<Float>.alignment)
         ptr.baseAddress!.copyMemory(from: pcm, byteCount: byteCount)
-        let block = try CMBlockBuffer(buffer: ptr, allocator: kCFAllocatorDefault)
+        let bb = try CMBlockBuffer(buffer: ptr, allocator: kCFAllocatorDefault)
         let buffer = try CMSampleBuffer(
-            dataBuffer: block, formatDescription: format, numSamples: 1, sampleTimings: [timing],
-            sampleSizes: [pcm.count])
+            dataBuffer: bb, formatDescription: format, numSamples: 1, sampleTimings: [timing],
+            sampleSizes: [byteCount])
         return buffer
     }
-
     public enum Error: Swift.Error {
         case noOptions, videoInputError, audioInputError
     }
