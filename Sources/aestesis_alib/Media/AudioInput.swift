@@ -82,6 +82,7 @@ public struct AudioDevice {
                 outStatus.pointee = AVAudioConverterInputStatus.haveData
                 return buffer
             }
+            // TODO: works only with device at 44100, need to fix it
             let targetFrameCapacity =
                 AVAudioFrameCount(outputFormat.sampleRate) * buffer.frameLength
                 / AVAudioFrameCount(buffer.format.sampleRate)
