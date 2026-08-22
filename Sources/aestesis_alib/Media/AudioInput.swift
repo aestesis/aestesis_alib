@@ -4,9 +4,7 @@
 //
 //  Created by renan jegouzo on 05/12/2023.
 //
-@preconcurrency
-
-import AVFoundation
+@preconcurrency import AVFoundation
 import Cocoa
 
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -20,93 +18,80 @@ public struct AudioDevice {
 
     // https://developer.apple.com/forums/thread/71008
     // https://forum.juce.com/t/how-to-fix-the-channel-names-of-coreaudio-devices/12349
-    public func open(leftChannel: Int, rightChannel: Int = -1, fps: Double = 60) throws -> Stream<Float> {
-        // TODO: debug, suxx if selected input not the same than system default input
-        // forum https://forums.developer.apple.com/forums/thread/71008
+    public func open(leftChannel: Int, rightChannel: Int = -1, fps: Double = 60) throws -> Stream<
+        Float
+    > {
         let engine = AVAudioEngine()
-        let inputNode: AVAudioInputNode = engine.inputNode
-        // get the low level input audio unit from the engine:
-        guard let inputUnit: AudioUnit = inputNode.audioUnit else {
+        guard let audioUnit: AudioUnit = engine.inputNode.audioUnit else {
             throw AudioError.audioUnitError
         }
-        // use core audio low level call to set the input device:
         var inputDeviceID: AudioDeviceID = UInt32(id)
         AudioUnitSetProperty(
-            inputUnit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0,
+            audioUnit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Input, 0,
             &inputDeviceID,
             UInt32(MemoryLayout<AudioDeviceID>.size))
-
-        var inNumberFrames: UInt32 = UInt32(44100 / fps)
+        let stream = BufferedStream<Float>()
+        let inputFormat = engine.inputNode.inputFormat(forBus: 0)
+        let outputFormat = AVAudioFormat(
+            commonFormat: .pcmFormatFloat32, sampleRate: inputFormat.sampleRate, channels: 2,
+            interleaved: true)!
+        Debug.info("inputFormat: \(inputFormat) outputFormat: \(outputFormat)")
+        // https://android.googlesource.com/platform/external/qemu/+/emu-master-dev/audio/coreaudio.c
+        var inNumberFrames: UInt32 = UInt32(inputFormat.sampleRate / fps)
         let propSize: UInt32 = UInt32(MemoryLayout<UInt32>.size)
         AudioUnitSetProperty(
-            inputUnit,
+            audioUnit,
             kAudioDevicePropertyBufferFrameSize,
             kAudioUnitScope_Input,
             0,
             &inNumberFrames,
             propSize)
-        
-        /*
-         // https://android.googlesource.com/platform/external/qemu/+/emu-master-dev/audio/coreaudio.c
-         var addr = AudioObjectPropertyAddress(mSelector: kAudioDevicePropertyBufferFrameSize, mScope: kAudioDevicePropertyScopeInput, mElement: kAudioObjectPropertyElementMain)
-         AudioObjectSetPropertyData(UInt32(id),
-         &addr,
-         0,
-         nil,
-         propSize,
-         &inNumberFrames);
-         */
-        let stream = BufferedStream<Float>()
 
-        let inputFormat = inputNode.inputFormat(forBus: 0)
-        let outputFormat = AVAudioFormat(
-            commonFormat: .pcmFormatFloat32, sampleRate: 44100, channels: 2, interleaved: true)!
         guard let converter = AVAudioConverter(from: inputFormat, to: outputFormat) else {
             throw AudioError.audioConverterError
         }
         converter.channelMap[0] = NSNumber(value: min(leftChannel, inputChannels.count - 1))
         converter.channelMap[1] = NSNumber(
             value: min(rightChannel >= 0 ? rightChannel : leftChannel, inputChannels.count - 1))
-
+        let resample = Resample(inputSampleRate: inputFormat.sampleRate, outputSampleRate: 44100)
         let sinkNode = AVAudioSinkNode { (timestamp, frames, audioBufferList) -> OSStatus in
-            //print("SINK: \(timestamp.pointee.mHostTime) - \(frames) - \(audioBufferList.pointee.mNumberBuffers)")
             guard
                 let buffer = AVAudioPCMBuffer(
                     pcmFormat: inputFormat, bufferListNoCopy: audioBufferList)
             else {
                 Debug.warning("AVAudioPCMBuffer format mismatch")
-                //stream.close()  
+                //stream.close()
                 return noErr
             }
-            let inputBlock: AVAudioConverterInputBlock = { inNumPackets, outStatus in
-                outStatus.pointee = AVAudioConverterInputStatus.haveData
-                return buffer
-            }
-            // TODO: works only with device at 44100, need to fix it
-            let targetFrameCapacity =
-                AVAudioFrameCount(outputFormat.sampleRate) * buffer.frameLength
-                / AVAudioFrameCount(buffer.format.sampleRate)
             if let convertedBuffer = AVAudioPCMBuffer(
-                pcmFormat: outputFormat, frameCapacity: targetFrameCapacity)
+                pcmFormat: outputFormat, frameCapacity: buffer.frameLength)
             {
-                var error: NSError?
-                let status = converter.convert(
-                    to: convertedBuffer, error: &error, withInputFrom: inputBlock)
-                assert(status != .error)
+                do {
+                    try converter.convert(to: convertedBuffer, from: buffer)
+                } catch {}
                 let audioData = [Float](
                     UnsafeBufferPointer(
                         start: convertedBuffer.floatChannelData?[0],
                         count: Int(convertedBuffer.frameLength) * convertedBuffer.stride))
-                if stream.write(audioData, offset: 0, count: audioData.count) != audioData.count {
+                let resampled = resample.feed(data: audioData)
+                if stream.write(resampled, offset: 0, count: resampled.count) != resampled.count {
                     Debug.error("AudioDevice: input skipping, buffer full")
                 }
             }
             return noErr
         }
         engine.attach(sinkNode)
-        engine.connect(engine.inputNode, to: sinkNode, format: nil)
+        engine.connect(engine.inputNode, to: sinkNode, format: inputFormat)
         engine.prepare()
         try engine.start()
+        // https://medium.com/@itsuki.enjoy/swift-macos-listen-for-input-device-changes-three-ways-6b60e5367aa0
+        NotificationCenter.default.addObserver(
+            forName: .AVAudioEngineConfigurationChange,
+            object: nil,
+            queue: .main
+        ) { _ in
+            stream.close()
+        }
         stream.onClose.once {
             engine.stop()
             engine.detach(sinkNode)
@@ -295,4 +280,11 @@ public enum AudioError: Swift.Error {
     case audioUnitError
     case audioConverterError
     case channelError
+}
+
+class MemoBool: @unchecked Sendable {
+    internal init(value: Bool) {
+        self.value = value
+    }
+    var value: Bool
 }
