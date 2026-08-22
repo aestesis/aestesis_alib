@@ -135,7 +135,7 @@ public class Library: NodeUI, @unchecked Sendable {
                             let writer = FileWriter(
                                 filename: filename,
                                 error: { err in
-                                    Debug.error(Error(err, #file, #line))
+                                    Debug.error(AlibError(err, #file, #line))
                                 })
                             res.pipe(to: writer)
                         } else {
@@ -154,7 +154,7 @@ public class Library: NodeUI, @unchecked Sendable {
                                         if (f["url"] as! String) == url {
                                             self.downloads.remove(f)
                                             f.error(
-                                                Error(
+                                                AlibError(
                                                     "too manies tries Library.download(\(url))",
                                                     #file, #line))
                                         }

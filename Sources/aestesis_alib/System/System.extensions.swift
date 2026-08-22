@@ -17,8 +17,8 @@ import Foundation
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-public extension AVAsset {
-    func generateThumbnail(_ fn: @escaping @Sendable (CGImage?) -> Void) {
+extension AVAsset {
+    public func generateThumbnail(_ fn: @escaping @Sendable (CGImage?) -> Void) {
         let imageGenerator = AVAssetImageGenerator(asset: self)
         let time = CMTime(seconds: 0.0, preferredTimescale: 600)
         let times = [NSValue(time: time)]
@@ -35,8 +35,8 @@ public extension AVAsset {
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-public extension CGImage {
-    func croppedResize(size: CGSize) -> CGImage? {
+extension CGImage {
+    public func croppedResize(size: CGSize) -> CGImage? {
         let width: Int = Int(size.width)
         let height: Int = Int(size.height)
         let bytesPerPixel = self.bitsPerPixel / self.bitsPerComponent
@@ -61,7 +61,7 @@ public extension CGImage {
         return context.makeImage()
     }
 
-    func jpegData() -> Data {
+    public func jpegData() -> Data {
         #if os(iOS)
             let uiImage = UIImage(cgImage: self)
             return UIImageJPEGRepresentation(uiImage, 0.9)
@@ -73,7 +73,7 @@ public extension CGImage {
         #endif
     }
 
-    func pngData() -> Data {
+    public func pngData() -> Data {
         #if os(iOS)
             let uiImage = UIImage(cgImage: self)
             return UIImageJPEGRepresentation(uiImage, 0.9)
@@ -87,8 +87,8 @@ public extension CGImage {
 }
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-public extension URL {
-    var fileExtension: String {
+extension URL {
+    public var fileExtension: String {
         if isFileURL {
             let filename = self.lastPathComponent
             if let i = filename.lastIndexOf(".") {
@@ -97,7 +97,7 @@ public extension URL {
         }
         return ""
     }
-    func checkFile(strategy: CheckStrategy) -> URL {
+    public func checkFile(strategy: CheckStrategy) -> URL {
         if isFileURL {
             let fm = FileManager.default
             switch strategy {
@@ -123,7 +123,7 @@ public extension URL {
         }
         return self
     }
-    enum CheckStrategy {
+    public enum CheckStrategy {
         case replace
         case rename
     }

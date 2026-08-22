@@ -33,9 +33,9 @@ public class Stream<T>: Atom, @unchecked Sendable {
     public let onData = Event<Void>()
     public let onFreespace = Event<Void>()
     public let onClose = Event<Void>()
-    public let onError = Event<Error>()
+    public let onError = Event<Swift.Error>()
     public private(set) var timeout: Double = 5
-    var pipes = [Stream: (data: Action<Void>, free: Action<Void>, error: Action<Error>)]()
+    var pipes = [Stream: (data: Action<Void>, free: Action<Void>, error: Action<Swift.Error>)]()
     public var available: Int {
         Debug.notImplemented()
         return 0
@@ -75,7 +75,7 @@ public class Stream<T>: Atom, @unchecked Sendable {
                 let b = self.read(mb)
                 let w = to.write(b, offset: 0, count: b.count)
                 if w != b.count {
-                    Debug.error(Error("write \(w)/\(b.count)", #file, #line))
+                    Debug.error(AlibError("write \(w)/\(b.count)", #file, #line))
                 }
 
             }
@@ -84,7 +84,7 @@ public class Stream<T>: Atom, @unchecked Sendable {
                 if let b = self.readControl(mc) {
                     let w = to.writeControl(b, offset: 0, count: b.count)
                     if w != b.count {
-                        Debug.error(Error("write \(w)/\(b.count)", #file, #line))
+                        Debug.error(AlibError("write \(w)/\(b.count)", #file, #line))
                     }
                 }
             }
@@ -98,7 +98,7 @@ public class Stream<T>: Atom, @unchecked Sendable {
                 error: onError.always(error)
             )
         } else {
-            let error: (Error) -> Void = { error in
+            let error: (Swift.Error) -> Void = { error in
                 // no piping...
             }
             pipes[to] = (
@@ -134,9 +134,13 @@ public class Stream<T>: Atom, @unchecked Sendable {
         Debug.notImplemented()
         return 0
     }
+    public func error(_ error: Swift.Error) {
+        onError.dispatch(error)
+        close()
+    }
     public init(
         timeout: Double = 5, data: (() -> Void)? = nil, free: (() -> Void)? = nil,
-        error: ((Error) -> Void)? = nil
+        error: ((Swift.Error) -> Void)? = nil
     ) {
         self.timeout = timeout
         if let d = data {
@@ -228,7 +232,7 @@ public class CircularStream<T>: Stream<T>, @unchecked Sendable {
     }
     init(
         capacity: Int, zero: T, timeout: Double = 5, data: (() -> Void)? = nil,
-        error: ((Error) -> Void)? = nil
+        error: ((Swift.Error) -> Void)? = nil
     ) {
         self.zero = zero
         buffer = [T](repeating: zero, count: capacity)
@@ -457,7 +461,7 @@ public class DataReader: Stream<UInt8>, @unchecked Sendable {
         }
         init(
             filename: String, timeout: Double = 5, data: (() -> Void)? = nil,
-            error: ((Error) -> Void)? = nil
+            error: ((Swift.Error) -> Void)? = nil
         ) {
             self.filename = filename
             file = InputStream(fileAtPath: filename)
@@ -494,7 +498,7 @@ public class DataReader: Stream<UInt8>, @unchecked Sendable {
         }
         init(
             filename: String, timeout: Double = 5, data: (() -> Void)? = nil,
-            error: ((Error) -> Void)? = nil
+            error: ((Swift.Error) -> Void)? = nil
         ) {
             self.filename = filename
             file = OutputStream(toFileAtPath: filename, append: false)

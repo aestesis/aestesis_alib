@@ -577,7 +577,7 @@ open class Texture2D: NodeUI, @unchecked Sendable {
             }
             return data
         } else {
-            Debug.error(Error("no texture", #file, #line))
+            Debug.error(AlibError("no texture", #file, #line))
         }
         return nil
     }
@@ -593,7 +593,7 @@ open class Texture2D: NodeUI, @unchecked Sendable {
             }
             return data
         } else {
-            Debug.error(Error("no texture", #file, #line))
+            Debug.error(AlibError("no texture", #file, #line))
         }
         return nil
     }
@@ -609,7 +609,7 @@ open class Texture2D: NodeUI, @unchecked Sendable {
             }
             return Color(bgra: data[0])
         } else {
-            Debug.error(Error("no texture", #file, #line))
+            Debug.error(AlibError("no texture", #file, #line))
         }
         return Color.transparent
     }
@@ -631,7 +631,7 @@ open class Texture2D: NodeUI, @unchecked Sendable {
                 Debug.error("invalid texture format", #file, #line)
             }
         } else {
-            Debug.error(Error("no texture", #file, #line))
+            Debug.error(AlibError("no texture", #file, #line))
         }
     }
     public func set(pixels data: [Float32]) {
@@ -663,7 +663,7 @@ open class Texture2D: NodeUI, @unchecked Sendable {
                 Debug.error("invalid texture format", #file, #line)
             }
         } else {
-            Debug.error(Error("no texture", #file, #line))
+            Debug.error(AlibError("no texture", #file, #line))
         }
     }
     public func set(pixels data: [UInt32]) {
@@ -682,7 +682,7 @@ open class Texture2D: NodeUI, @unchecked Sendable {
                 Debug.error("invalid texture format")
             }
         } else {
-            Debug.error(Error("no texture", #file, #line))
+            Debug.error(AlibError("no texture", #file, #line))
         }
     }
     public func set(pixels data: [UInt16]) {
@@ -701,7 +701,7 @@ open class Texture2D: NodeUI, @unchecked Sendable {
                 Debug.error("invalid texture format", #file, #line)
             }
         } else {
-            Debug.error(Error("no texture", #file, #line))
+            Debug.error(AlibError("no texture", #file, #line))
         }
     }
     public func set(pixels data: [UInt8]) {
@@ -720,7 +720,7 @@ open class Texture2D: NodeUI, @unchecked Sendable {
                 Debug.error("invalid texture format", #file, #line)
             }
         } else {
-            Debug.error(Error("no texture", #file, #line))
+            Debug.error(AlibError("no texture", #file, #line))
         }
     }
     public func set(raw data: UnsafeRawPointer) {
@@ -741,7 +741,7 @@ open class Texture2D: NodeUI, @unchecked Sendable {
                 Debug.error("invalid texture format", #file, #line)
             }
         } else {
-            Debug.error(Error("no texture", #file, #line))
+            Debug.error(AlibError("no texture", #file, #line))
         }
     }
     public func set(
@@ -766,7 +766,7 @@ open class Texture2D: NodeUI, @unchecked Sendable {
             }
             cb?.commit()
         } else {
-            Debug.error(Error("mismatch texture size", #file, #line))
+            Debug.error(AlibError("mismatch texture size", #file, #line))
         }
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////

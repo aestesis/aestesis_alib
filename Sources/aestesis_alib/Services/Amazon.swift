@@ -40,9 +40,9 @@ public class Amazon {
                 //Debug.warning("amazon: \(url)")
                 fn(url)
             } else if let err = r as? Error {
-                fn(Error(err))
+                fn(AlibError(err))
             } else {
-                fn(Error("bad amazon response"))
+                fn(AlibError("bad amazon response"))
             }
         }
         /*

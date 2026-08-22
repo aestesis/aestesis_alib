@@ -282,7 +282,7 @@ open class Graphics: NodeUI, @unchecked Sendable {
         let m = image.bounds.center
         let source = image.size
         if sd.w < image.size.width || sd.h < image.size.height {
-            Debug.error(Error("destination can't be smaller than 9grid source", #file, #line))
+            Debug.error(AlibError("destination can't be smaller than 9grid source", #file, #line))
             return
         }
         let rl: [(d: Rect, s: Rect)] = [

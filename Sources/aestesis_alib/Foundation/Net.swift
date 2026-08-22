@@ -173,7 +173,7 @@ public class Socket: Stream<UInt8>, @unchecked Sendable {
                 if !s.release {
                     if !s.connected {
                         if ß.time - s.start > s.timeout || s.errsock {
-                            s.onError.dispatch(Error("can't connect \(s.host):\(s.port)"))
+                            s.onError.dispatch(AlibError("can't connect \(s.host):\(s.port)"))
                             s.close()
                         }
                     } else if let sr = s.sread {
@@ -188,7 +188,7 @@ public class Socket: Stream<UInt8>, @unchecked Sendable {
                                 s.close()
                                 break
                             } else if done < 0 {  // error
-                                s.onError.dispatch(Error("broken connection  \(s.host):\(s.port)"))
+                                s.onError.dispatch(AlibError("broken connection  \(s.host):\(s.port)"))
                                 s.close()
                                 break
                             }
@@ -486,7 +486,7 @@ public class Request: Future, @unchecked Sendable {  // TODO: request response s
                             self.response.statusMessage, self.response, #file, #line))
                 }
             } else {
-                self.error(Error("Bad http response header", #file, #line))
+                self.error(AlibError("Bad http response header", #file, #line))
             }
         }
 
@@ -541,7 +541,7 @@ public class Request: Future, @unchecked Sendable {  // TODO: request response s
                 timer.resume()
             }
         } else {
-            self.error(Error("wrong URL \(url)", #file, #line))
+            self.error(AlibError("wrong URL \(url)", #file, #line))
         }
 
     }
@@ -588,13 +588,13 @@ public class Response: UTF8Reader, @unchecked Sendable {
         if let http = readLine() {
             let htp = http.trim().split(" ")
             if htp.count < 3 {
-                onError.dispatch(Error("Wrong Http Response, bad format", #file, #line))
+                onError.dispatch(AlibError("Wrong Http Response, bad format", #file, #line))
                 return false
             }
             if let s = Int(htp[1]) {
                 status = s
             } else {
-                onError.dispatch(Error("Wrong Http Response, bad format", #file, #line))
+                onError.dispatch(AlibError("Wrong Http Response, bad format", #file, #line))
                 return false
             }
             statusMessage = htp[1..<htp.count].joined(separator: " ")
@@ -635,7 +635,7 @@ public class Response: UTF8Reader, @unchecked Sendable {
             return NSData(bytes: data, length: data.count) as Data?
         }
     #endif
-    public class ResponseError: Error, @unchecked Sendable {
+    public class ResponseError: AlibError, @unchecked Sendable {
         public let response: Response
         init(_ message: String, _ response: Response, _ file: String = #file, _ line: Int = #line) {
             self.response = response
@@ -695,20 +695,20 @@ public class Web {
                     if let text = res.readAll() {
                         fn(text)
                     } else {
-                        fn(Error("empty response: \(url)"))
+                        fn(AlibError("empty response: \(url)"))
                     }
                 }
-            } else if let err = fut.result as? Error {
+            } else if let err = fut.result as? AlibError {
                 if let re: Response.ResponseError = err.get() {
                     re.response.onClose.once {
                         if let text = re.response.readAll() {
                             fn(text)
                         } else {
-                            fn(Error("empty response: \(url)"))
+                            fn(AlibError("empty response: \(url)"))
                         }
                     }
                 } else {
-                    fn(Error(err))
+                    fn(AlibError(err))
                 }
             }
         }
@@ -725,27 +725,27 @@ public class Web {
                         if let xdoc = parseXML(text) {
                             fn(xdoc)
                         } else {
-                            fn(Error("xml error: \(url)"))
+                            fn(AlibError("xml error: \(url)"))
                         }
                     } else {
-                        fn(Error("empty response: \(url)"))
+                        fn(AlibError("empty response: \(url)"))
                     }
                 }
-            } else if let err = fut.result as? Error {
+            } else if let err = fut.result as? AlibError {
                 if let re: Response.ResponseError = err.get() {
                     re.response.onClose.once {
                         if let text = re.response.readAll() {
                             if let xdoc = parseXML(text) {
                                 fn(xdoc)
                             } else {
-                                fn(Error("xml error: \(url)"))
+                                fn(AlibError("xml error: \(url)"))
                             }
                         } else {
-                            fn(Error("empty response: \(url)"))
+                            fn(AlibError("empty response: \(url)"))
                         }
                     }
                 } else {
-                    fn(Error(err))
+                    fn(AlibError(err))
                 }
             }
         }
@@ -775,27 +775,27 @@ public class Web {
                              */
                             fn(j)
                         } else {
-                            fn(Error("bad json format \(url)"))
+                            fn(AlibError("bad json format \(url)"))
                         }
                     } else {
-                        fn(Error("empty response: \(url)"))
+                        fn(AlibError("empty response: \(url)"))
                     }
                 }
-            } else if let err = fut.result as? Error {
+            } else if let err = fut.result as? AlibError {
                 if let re: Response.ResponseError = err.get() {
                     re.response.onClose.once {
                         if let text = re.response.readAll() {
                             if let j = parseJSON(text) {
                                 fn(j)
                             } else {
-                                fn(Error("bad json format: \(url) \(re.message)"))
+                                fn(AlibError("bad json format: \(url) \(re.message)"))
                             }
                         } else {
-                            fn(Error("empty response: \(url)"))
+                            fn(AlibError("empty response: \(url)"))
                         }
                     }
                 } else {
-                    fn(Error(err))
+                    fn(AlibError(err))
                 }
             }
         }
@@ -804,12 +804,12 @@ public class Web {
         parent: NodeUI, url: String, _ fn: @escaping @Sendable (Any?) -> Void
     ) {
         guard let imageUrl: Foundation.URL = Foundation.URL(string: url) else {
-            fn(Error("wrong url format"))
+            fn(AlibError("wrong url format"))
             return
         }
         DispatchQueue.global().async {
             guard let imageData = try? Data(contentsOf: imageUrl) else {
-                fn(Error("request error"))
+                fn(AlibError("request error"))
                 return
             }
             #if os(iOS) || os(tvOS)
@@ -817,7 +817,7 @@ public class Web {
                     if let image = UIImage(data: imageData) {
                         fn(Bitmap(parent: parent, cg: image.cgImage!))
                     } else {
-                        fn(Error("wrong bitmap data"))
+                        fn(AlibError("wrong bitmap data"))
                     }
                 }
             #elseif os(macOS)
@@ -826,7 +826,7 @@ public class Web {
                 {
                     fn(Bitmap(parent: parent, cg: cg))
                 } else {
-                    fn(Error("wrong bitmap data"))
+                    fn(AlibError("wrong bitmap data"))
                 }
             #else
                 Debug.notImplemented()
@@ -874,27 +874,27 @@ public class Web {
                         if let xdoc = parseXML(text) {
                             fn(xdoc)
                         } else {
-                            fn(Error("bad xml format: \(url)"))
+                            fn(AlibError("bad xml format: \(url)"))
                         }
                     } else {
-                        fn(Error("empty response: \(url)"))
+                        fn(AlibError("empty response: \(url)"))
                     }
                 }
-            } else if let err = fut.result as? Error {
+            } else if let err = fut.result as? AlibError {
                 if let re: Response.ResponseError = err.get() {
                     re.response.onClose.once {
                         if let text = re.response.readAll() {
                             if let xdoc = parseXML(text) {
                                 fn(xdoc)
                             } else {
-                                fn(Error("bad xml format: \(url)"))
+                                fn(AlibError("bad xml format: \(url)"))
                             }
                         } else {
-                            fn(Error("empty response: \(url)"))
+                            fn(AlibError("empty response: \(url)"))
                         }
                     }
                 } else {
-                    fn(Error(err))
+                    fn(AlibError(err))
                 }
             }
         }

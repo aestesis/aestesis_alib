@@ -44,7 +44,7 @@ class IGN {
             if let xdoc = r as? AEXMLDocument {
                 fn(xdoc)
             } else if let err = r as? Error {
-                fn(Error(err))
+                fn(AlibError(err))
             }
         }
     }

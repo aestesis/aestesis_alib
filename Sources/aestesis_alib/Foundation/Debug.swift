@@ -19,46 +19,47 @@
 
 import Foundation
 
-
 public class Debug {
     nonisolated(unsafe) public static var codeRoot = "/aestesis-swift/"
-    static func log(_ t:String) {
-        NSLog("%@ %@","\(Application.name):",t)
+    static func log(_ t: String) {
+        NSLog("%@ %@", "\(Application.name):", t)
     }
-    static func truncfile(_ f:String) -> String {
-        if var n=f.lastIndexOf(codeRoot) {
+    static func truncfile(_ f: String) -> String {
+        if var n = f.lastIndexOf(codeRoot) {
             n += codeRoot.length
             return f[n..<f.length]
         }
         return f
     }
-    public static func info(_ t:String,_ f:String=#file,_ l:Int=#line) {
+    public static func info(_ t: String, _ f: String = #file, _ l: Int = #line) {
         #if DEBUG
-        log("🗯 \(t)  \(truncfile(f)):\(l)")
+            log("🗯 \(t)  \(truncfile(f)):\(l)")
         #endif
     }
-    public static func warning(_ t:String,_ f:String=#file,_ l:Int=#line) {
+    public static func warning(_ t: String, _ f: String = #file, _ l: Int = #line) {
         log("⚡️ \(t)  \(truncfile(f)):\(l)")
     }
-    public static func error(_ t:String,_ f:String=#file,_ l:Int=#line) {
+    public static func error(_ t: String, _ f: String = #file, _ l: Int = #line) {
         log("❗️ \(t)  \(truncfile(f)):\(l)")
     }
-    public static func error(_ e:Error,_ f:String=#file,_ l:Int=#line) {
-        error(e.description,f,l)
-    }
-    public static func assert(_ b:Bool) {
-        if !b {
-            print("assert");
+    public static func error(_ e: Error, _ f: String = #file, _ l: Int = #line) {
+        if let e = e as? AlibError {
+            error(e.description, f, l)
+        } else {
+            error(e.localizedDescription, f, l)
         }
     }
-    public static func notImplemented(_ f:String=#file,_ l:Int=#line) {
+    public static func assert(_ b: Bool) {
+        if !b {
+            print("assert")
+        }
+    }
+    public static func notImplemented(_ f: String = #file, _ l: Int = #line) {
         log("💔 *** Not Implemented *** \(f):\(l)")
     }
-    public static func profile(_ message:String,_ fn:()->()) {
-        let t=ß.time
+    public static func profile(_ message: String, _ fn: () -> Void) {
+        let t = ß.time
         fn()
         Debug.info("\(message) in \((ß.time-t).string(3))")
     }
 }
-
-

@@ -27,12 +27,12 @@ public class Effect: NodeUI, @unchecked Sendable {
     public var computing = false
     public func process(source: Bitmap) -> Future {
         let fut = Future(context: "process()")
-        fut.error(Error("not implemented", #file, #line))
+        fut.error(AlibError("not implemented", #file, #line))
         return fut
     }
     public func process(source: Bitmap, destination: Bitmap) -> Future {
         let fut = Future(context: "process()")
-        fut.error(Error("not implemented", #file, #line))
+        fut.error(AlibError("not implemented", #file, #line))
         return fut
     }
     static func globals(_ viewport: Viewport) {
@@ -68,7 +68,7 @@ public class GradientEffect: Effect, @unchecked Sendable {
             }
         } else {
             let _ = Atom.wait(0) {
-                fut.error(Error("detached", #file, #line))
+                fut.error(AlibError("detached", #file, #line))
             }
         }
         return fut
@@ -94,7 +94,7 @@ public class GradientEffect: Effect, @unchecked Sendable {
             computing = true
             g.onDone { [weak self] ok in
                 guard let self = self, self.attached else {
-                    fut.error(Error("detached", #file, #line))
+                    fut.error(AlibError("detached", #file, #line))
                     return
                 }
                 self.computing = false
@@ -104,17 +104,17 @@ public class GradientEffect: Effect, @unchecked Sendable {
                     break
                 case .error(let message):
                     Debug.error("GradientEffect, gpu error: \(message)", #file, #line)
-                    fut.error(Error("GPU problem", #file, #line))
+                    fut.error(AlibError("GPU problem", #file, #line))
                     break
                 default:
-                    fut.error(Error("GPU problem", #file, #line))
+                    fut.error(AlibError("GPU problem", #file, #line))
                     break
                 }
             }
         } else {
             Debug.error("GradientEffect, detached", #file, #line)
             let _ = Atom.wait(0) {
-                fut.error(Error("detached", #file, #line))
+                fut.error(AlibError("detached", #file, #line))
             }
         }
         return fut

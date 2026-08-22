@@ -36,7 +36,7 @@ class Itunes {
                 fn(json)
             } else if let err = r as? Error {
                 Debug.warning("itunes: errror \(err)")
-                fn(Error(err))
+                fn(AlibError(err))
             }
         })
     }
@@ -49,7 +49,7 @@ class Itunes {
                 fn(json)
             } else if let err = r as? Error {
                 Debug.warning("itunes: errror \(err)")
-                fn(Error(err))
+                fn(AlibError(err))
             }
         })
     }
@@ -61,14 +61,14 @@ class Itunes {
                         if let json = r as? JSON {
                             fn(json)
                         } else if let error = r as? Error {
-                            fn(Error(error))
+                            fn(AlibError(error))
                         }
                     }
                 } else {
-                    fn(Error("bad itunes response"))
+                    fn(AlibError("bad itunes response"))
                 }
             } else if let error = r as? Error {
-                fn(Error(error))
+                fn(AlibError(error))
             }
         }
     }

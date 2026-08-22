@@ -74,7 +74,7 @@ public class Texture3D: NodeUI, @unchecked Sendable {
             }
             return data
         } else {
-            Debug.error(Error("no texture"))
+            Debug.error(AlibError("no texture"))
         }
         return nil
     }

@@ -23,7 +23,7 @@ public class Discogs {
                 fn(json)
             } else if let err = r as? Error {
                 Debug.warning("discogs: error: \(err)")
-                fn(Error(err))
+                fn(AlibError(err))
             }
         })
     }
@@ -37,7 +37,7 @@ public class Discogs {
                             found = true
                             Web.getJSON(url) { r in
                                 if let error = r as? Error {
-                                    fn(Error(error))
+                                    fn(AlibError(error))
                                 } else if let json = r as? JSON {
                                     fn(json)
                                 }
@@ -46,10 +46,10 @@ public class Discogs {
                         }
                     }
                     if !found {
-                        fn(Error("Discogs.artist(name:\(name))  not found"))
+                        fn(AlibError("Discogs.artist(name:\(name))  not found"))
                     }
                 } else {
-                    fn(Error("Discogs.artist(name:\(name))  not found"))
+                    fn(AlibError("Discogs.artist(name:\(name))  not found"))
                 }
             } else if let error = r as? Error {
                 fn(error)

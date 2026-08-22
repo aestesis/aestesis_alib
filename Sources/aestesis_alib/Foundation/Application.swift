@@ -171,7 +171,7 @@ public class Application {
                 do {
                     try fm.createDirectory(atPath: dir, withIntermediateDirectories: true, attributes: nil)
                 } catch {
-                    Debug.error(Error("can't create app local directory",#file,#line))
+                    Debug.error(AlibError("can't create app local directory",#file,#line))
                 }
             }
             return dir+path

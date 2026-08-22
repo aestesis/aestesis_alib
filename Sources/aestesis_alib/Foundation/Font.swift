@@ -440,7 +440,7 @@ import Foundation
             }
             let b = Bitmap(parent: self.viewport!, size: Size(8, 8))
             Debug.error("error Font.Mask  size:\(r.bottomRight)  text:\(text)")
-            b["error"] = Error("error Font.Mask  size:\(r.bottomRight)  text:\(text)", #file, #line)
+            b["error"] = AlibError("error Font.Mask  size:\(r.bottomRight)  text:\(text)", #file, #line)
             return b
         }
         public func bitmap(

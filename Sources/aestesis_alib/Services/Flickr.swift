@@ -23,7 +23,7 @@ public class Flickr {
             if let json = r as? JSON {
                 fn(json)
             } else if let err = r as? Error {
-                fn(Error(err))
+                fn(AlibError(err))
             }
         })
     }

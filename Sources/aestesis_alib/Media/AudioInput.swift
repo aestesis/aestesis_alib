@@ -60,6 +60,9 @@ public struct AudioDevice {
                     pcmFormat: inputFormat, bufferListNoCopy: audioBufferList)
             else {
                 Debug.warning("AVAudioPCMBuffer format mismatch")
+                DispatchQueue.main.async {
+                    stream.error(AudioError.formatError)
+                }
                 //stream.close()
                 return noErr
             }
@@ -89,8 +92,10 @@ public struct AudioDevice {
             forName: .AVAudioEngineConfigurationChange,
             object: nil,
             queue: .main
-        ) { _ in
-            stream.close()
+        ) { n in
+            DispatchQueue.main.async {
+                stream.error(AudioError.audioUnitSettingsChanged)
+            }
         }
         stream.onClose.once {
             engine.stop()
@@ -278,13 +283,9 @@ public struct AudioDevice {
 
 public enum AudioError: Swift.Error {
     case audioUnitError
+    case audioUnitSettingsChanged
     case audioConverterError
     case channelError
+    case formatError
 }
 
-class MemoBool: @unchecked Sendable {
-    internal init(value: Bool) {
-        self.value = value
-    }
-    var value: Bool
-}

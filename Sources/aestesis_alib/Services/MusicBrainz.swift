@@ -21,40 +21,40 @@ public class MusicBrainz {
     }
     public static func artist(name:String,_ fn:@escaping (Any?)->()) {
         if name.length==0 {
-            fn(Error("can't find artist without name",#file,#line))
+            fn(AlibError("can't find artist without name",#file,#line))
         } else if let n=name.urlEncoded {
             MusicBrainz.request("/artist/?fmt=json&limit=1&&query="+n,fn)
         } else {
-            fn(Error("incompatible artist name: \(name)",#file,#line))
+            fn(AlibError("incompatible artist name: \(name)",#file,#line))
         }
     }
     public static func release(_ name:String,_ fn:@escaping (Any?)->()) {
         if name.length==0 {
-            fn(Error("can't find release without name",#file,#line))
+            fn(AlibError("can't find release without name",#file,#line))
         } else if let n=name.urlEncoded {
             MusicBrainz.request("/release/?fmt=json&query="+n,fn)
         } else {
-            fn(Error("incompatible release name: \(name)",#file,#line))
+            fn(AlibError("incompatible release name: \(name)",#file,#line))
         }
     }
     public static func releaseForArtist(_ mbid:String,_ fn:@escaping (Any?)->()) {
         if mbid.length==0 {
-            fn(Error("can't find release without mbid",#file,#line))
+            fn(AlibError("can't find release without mbid",#file,#line))
         } else if let n=mbid.urlEncoded {
             MusicBrainz.request("/release?fmt=json&artist="+n,fn)
         } else {
-            fn(Error("incompatible release mbid: \(mbid)",#file,#line))
+            fn(AlibError("incompatible release mbid: \(mbid)",#file,#line))
         }
     }
     public static func cover(_ id:String,_ fn:@escaping (Any?)->()) {
         if id.length==0 {
-            fn(Error("can't find cover without id",#file,#line))
+            fn(AlibError("can't find cover without id",#file,#line))
         } else if let gid=id.urlEncoded {
             Web.getJSON(coverserver+gid) { r in
                 fn(r)
             }
         } else {
-            fn(Error("incompatible cover id: \(id)",#file,#line))
+            fn(AlibError("incompatible cover id: \(id)",#file,#line))
         }
     }
     public static func cover(artist:String,title:String,_ fn: @escaping (Any?)->()) {
@@ -94,33 +94,33 @@ public class MusicBrainz {
                                                         Debug.info("cover: \(url)")
                                                         fn(url)
                                                     } else {
-                                                        fn(Error("no cover",#file,#line))
+                                                        fn(AlibError("no cover",#file,#line))
                                                     }
                                                 } else {
                                                     fn(r)
                                                 }
                                             }
                                         } else {
-                                            fn(Error("no cover",#file,#line))
+                                            fn(AlibError("no cover",#file,#line))
                                         }
                                     } else {
-                                        fn(Error("no cover",#file,#line))
+                                        fn(AlibError("no cover",#file,#line))
                                     }
                                 } else {
-                                    fn(Error("release not found",#file,#line))
+                                    fn(AlibError("release not found",#file,#line))
                                 }
                             } else {
                                 fn(r)
                             }
                         }
                     } else {
-                        fn(Error("artist not found",#file,#line))
+                        fn(AlibError("artist not found",#file,#line))
                     }
                 } else {
-                    fn(Error("artist not found",#file,#line))
+                    fn(AlibError("artist not found",#file,#line))
                 }
             } else if let err = r as? Error  {
-                fn(Error(err,#file,#line))
+                fn(AlibError(err,#file,#line))
             }
         }
     }
