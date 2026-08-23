@@ -177,8 +177,11 @@ open class Bitmap: Texture2D, @unchecked Sendable {
         cb.waitUntilCompleted()
     }
 
-    public func copy() -> Bitmap {
-        let b = Bitmap(parent: parent as! NodeUI, size: size)
+    public func copy() throws -> Bitmap {
+        guard let parent = parent as? NodeUI else {
+            throw AlibError("Bitmap.copy() source bitmap detached")
+        }
+        let b = Bitmap(parent: parent, size: size)
         b.copy(source: self)
         return b
     }
@@ -187,7 +190,6 @@ open class Bitmap: Texture2D, @unchecked Sendable {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 /*
  custom kernel
 

@@ -49,7 +49,7 @@ public class RenderPass: NodeUI, @unchecked Sendable {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public func commit() {
-        command!.endEncoding()
+        command?.endEncoding()
         if let d = drawable {
             cb.present(d)
         }
@@ -61,71 +61,71 @@ public class RenderPass: NodeUI, @unchecked Sendable {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     func use(_ sampler: Sampler, atIndex index: Int = 0) {
-        command!.setFragmentSamplerState(sampler.state, index: index)
+        command?.setFragmentSamplerState(sampler.state, index: index)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public func use(program: Program) {
-        command!.setRenderPipelineState(program.rps[format]!)
+        command?.setRenderPipelineState(program.rps[format]!)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public func use(state: DepthStencilState) {
-        command!.setDepthStencilState(state.state)
+        command?.setDepthStencilState(state.state)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public func use(vertexBuffer buffer: Buffer, atIndex index: Int) {
-        command!.setVertexBuffer(buffer.b, offset: 0, index: index)
+        command?.setVertexBuffer(buffer.b, offset: 0, index: index)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public func use(fragmentBuffer fragment: Buffer, atIndex index: Int) {
-        command!.setFragmentBuffer(fragment.b, offset: 0, index: index)
+        command?.setFragmentBuffer(fragment.b, offset: 0, index: index)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public func use(texture: Texture2D, atIndex index: Int = 0) {
-        command!.setFragmentTexture(texture.texture, index: index)
+        command?.setFragmentTexture(texture.texture, index: index)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public func use(texture: Texture3D, atIndex index: Int = 0) {
-        command!.setFragmentTexture(texture.texture, index: index)
+        command?.setFragmentTexture(texture.texture, index: index)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public func use(vertexTexture vt: Texture2D, atIndex index: Int = 0) {
-        command!.setVertexTexture(vt.texture, index: index)
+        command?.setVertexTexture(vt.texture, index: index)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public func draw(triangle n: Int) {
-        command!.drawPrimitives(type: MTLPrimitiveType.triangle, vertexStart: 0, vertexCount: n)
+        command?.drawPrimitives(type: MTLPrimitiveType.triangle, vertexStart: 0, vertexCount: n)
     }
     public func draw(trianglestrip n: Int) {
-        command!.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: n)
+        command?.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: n)
     }
     public func draw(triangle n: Int, index: Buffer, instanceCount: Int = 1) {
-        command!.drawIndexedPrimitives(
+        command?.drawIndexedPrimitives(
             type: .triangle, indexCount: n, indexType: .uint32, indexBuffer: index.b,
             indexBufferOffset: 0, instanceCount: instanceCount
         )
     }
     public func draw(line n: Int) {
-        command!.drawPrimitives(type: .line, vertexStart: 0, vertexCount: n)
+        command?.drawPrimitives(type: .line, vertexStart: 0, vertexCount: n)
     }
     public func draw(sprite n: Int) {
-        command!.drawPrimitives(type: .point, vertexStart: 0, vertexCount: n)
+        command?.drawPrimitives(type: .point, vertexStart: 0, vertexCount: n)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public func clip(rect r0: Rect) {
         let r = r0 * scale
-        command!.setScissorRect(
+        command?.setScissorRect(
             MTLScissorRect(x: Int(r.x), y: Int(r.y), width: Int(r.w), height: Int(r.h)))
     }
     public func set(cull: CullMode) {
-        command!.setCullMode(cull.system)
+        command?.setCullMode(cull.system)
     }
     public func set(front: Winding) {
-        command!.setFrontFacing(front.system)
+        command?.setFrontFacing(front.system)
     }
     public func set(fill: Bool) {
-        command!.setTriangleFillMode(fill ? MTLTriangleFillMode.fill : MTLTriangleFillMode.lines)
+        command?.setTriangleFillMode(fill ? MTLTriangleFillMode.fill : MTLTriangleFillMode.lines)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -135,11 +135,13 @@ public class RenderPass: NodeUI, @unchecked Sendable {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     init(
-        texture: Texture2D, clear: Color? = nil, depthClear: Double? = nil, storeDepth: Bool = false
+        texture: Texture2D, clear: Color? = nil, depthClear: Double? = nil,
+        storeDepth: Bool = false, viewport: Viewport? = nil
     ) {
-        cb = texture.viewport!.gpu.queue.makeCommandBuffer()!
+        let vp = viewport ?? texture.viewport!
+        cb = vp.gpu.queue.makeCommandBuffer()!
         format = texture.format.program
-        super.init(parent: texture.viewport!)
+        super.init(parent: vp)
         let descriptor = MTLRenderPassDescriptor()
         descriptor.colorAttachments[0].texture = texture.texture
         if let c = clear {

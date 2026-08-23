@@ -1115,7 +1115,7 @@ open class Graphics: NodeUI, @unchecked Sendable {
     }
     public init(
         image: Bitmap, clear: Color? = nil, depthClear: Double? = nil, depthStore: Bool = false,
-        clip: Rect? = nil
+        clip: Rect? = nil, viewport: Viewport? = nil
     ) {
         let m = Mat4.gpu(size: image.size)
         self.matrix = m
@@ -1123,9 +1123,10 @@ open class Graphics: NodeUI, @unchecked Sendable {
         self.scale = image.scale
         self.clip = Graphics.transformClip(m, (clip ?? image.bounds))
         self.render = RenderPass(
-            texture: image, clear: clear, depthClear: depthClear, storeDepth: depthStore)
+            texture: image, clear: clear, depthClear: depthClear, storeDepth: depthStore,
+            viewport: viewport)
         renderOwner = true
-        super.init(parent: image)
+        super.init(parent: viewport ?? image)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     deinit {
