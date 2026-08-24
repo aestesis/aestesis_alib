@@ -140,7 +140,7 @@ public class RenderPass: NodeUI, @unchecked Sendable {
     ) {
         let vp = viewport ?? texture.viewport!
         cb = vp.gpu.queue.makeCommandBuffer()!
-        format = texture.format.program
+        format = texture.format
         super.init(parent: vp)
         let descriptor = MTLRenderPassDescriptor()
         descriptor.colorAttachments[0].texture = texture.texture
@@ -214,6 +214,49 @@ public class RenderPass: NodeUI, @unchecked Sendable {
                 } else {
                     self.onDone.dispatch(.success)
                 }
+            }
+            self.detach()
+        })
+    }
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    init(texture: Texture3D, slice: Int, clear: Color? = nil, viewport: Viewport? = nil) {
+        let vp = viewport ?? texture.viewport!
+        cb = vp.gpu.queue.makeCommandBuffer()!
+        format = texture.format
+        super.init(parent: vp)
+        let descriptor = MTLRenderPassDescriptor()
+        descriptor.colorAttachments[0].texture = texture.texture
+        if let c = clear {
+            descriptor.colorAttachments[0].loadAction = MTLLoadAction.clear
+            descriptor.colorAttachments[0].clearColor = MTLClearColorMake(c.r, c.g, c.b, c.a)
+        } else {
+            descriptor.colorAttachments[0].loadAction = MTLLoadAction.load
+        }
+        descriptor.colorAttachments[0].storeAction = MTLStoreAction.store
+        size = Size(width: texture.size.x, height: texture.size.y)
+        command = cb.makeRenderCommandEncoder(descriptor: descriptor)
+        if let cm = command {
+            cm.setViewport(
+                MTLViewport(
+                    originX: 0, originY: 0, width: texture.size.x,
+                    height: texture.size.y,
+                    znear: 0, zfar: 1))
+        }
+        cb.addCompletedHandler({ (cb: MTLCommandBuffer) in
+            if cb.status == .error {
+                if cb.error!.localizedDescription.lowercased().contains("discarded") {
+                    self.onDone.dispatch(.discarded)
+                } else {
+                    if let p = texture.parent {
+                        Debug.error(
+                            "Texture rendering error, parent:\(p.className), error:\(cb.error!.localizedDescription)"
+                        )
+                    }
+                    self.onDone.dispatch(
+                        .error(message: cb.error!.localizedDescription.lowercased()))
+                }
+            } else {
+                self.onDone.dispatch(.success)
             }
             self.detach()
         })
@@ -411,6 +454,25 @@ public class Program: NodeUI, @unchecked Sendable {
                 return .invalid
             }
         }
+        static public func from(pixelFormat: MTLPixelFormat) -> Format {
+            switch pixelFormat {
+            case .r8Unorm:
+                return .alpha
+            case .r16Unorm:
+                return .height
+            case .bgra8Unorm, .bgra8Unorm_srgb:
+                return .bgra
+            case .r32Float:
+                return .float
+            case .rg32Float:
+                return .float2
+            case .rgba16Unorm:
+                return .rgba16
+            default:
+                fatalError("unknow format")
+            }
+        }
+
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////

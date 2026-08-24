@@ -190,7 +190,7 @@ public class MaterialHeightMap: MaterialOld, @unchecked Sendable {
         parent: NodeUI, name: String, blend: BlendMode = BlendMode.opaque,
         cull: CullMode = CullMode.front, ambient: Color = Color(a: 1, l: 0.05),
         diffuse: Color = Color(a: 1, l: 0.8), specular: Color = Color.white, shininess: Double = 40,
-        textureSize: Size, heightSize: Size, heightFormat: Texture2D.Format = Texture2D.Format.bgra,
+        textureSize: Size, heightSize: Size, heightFormat: Program.Format = Program.Format.bgra,
         scale: Double, adjustNormals: Double = 1.0
     ) {
         self.adjustNormals = adjustNormals

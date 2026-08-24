@@ -34,7 +34,7 @@ import Foundation
 public class Texture3D: NodeUI, @unchecked Sendable {
     public private(set) var texture: MTLTexture?
     public private(set) var size: Vec3
-    public init(parent: NodeUI, size: Int, pixels: [UInt32]? = nil) {
+    public init(parent: NodeUI, size: Int, pixels: [UInt32]? = nil, renderTarget: Bool = false) {
         self.size = Vec3(Double(size), Double(size), Double(size))
         super.init(parent: parent)
         let textureDescriptor = MTLTextureDescriptor()
@@ -43,7 +43,7 @@ public class Texture3D: NodeUI, @unchecked Sendable {
         textureDescriptor.width = size
         textureDescriptor.height = size
         textureDescriptor.depth = size
-        textureDescriptor.usage = .shaderRead
+        textureDescriptor.usage = renderTarget ? [.shaderRead, .renderTarget] : [.shaderRead]
         self.texture = viewport?.gpu.device.makeTexture(descriptor: textureDescriptor)
         if let texture = texture, let pixels = pixels {
             pixels.withUnsafeBytes { bytes in
@@ -99,6 +99,12 @@ public class Texture3D: NodeUI, @unchecked Sendable {
                     mipmapLevel: 0, withBytes: bytes.baseAddress!, bytesPerRow: Int(size.x) * 4)
             }
         }
+    }
+    public var format: Program.Format {
+        if let t = texture {
+            return Program.Format.from(pixelFormat: t.pixelFormat)
+        }
+        return .bgra
     }
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////

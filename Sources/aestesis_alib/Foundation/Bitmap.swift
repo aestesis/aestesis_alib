@@ -38,7 +38,7 @@ open class SharedBitmap: Bitmap, @unchecked Sendable {
     }
     public init(
         parent: NodeUI, size: Size, scale: Size = Size(1, 1), border: Size = Size.zero,
-        format: Format = .bgra, file: String = #file, line: Int = #line
+        format: Program.Format = .bgra, file: String = #file, line: Int = #line
     ) {
         generandom = ß.rnd
         super.init(

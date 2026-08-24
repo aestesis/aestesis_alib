@@ -61,32 +61,6 @@ public class TextureCache {
 open class Texture2D: NodeUI, @unchecked Sendable {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public enum Format {
-        case alpha
-        case height
-        case bgra
-        case rgba16
-        case float
-        case float2
-        var program: Program.Format {
-            switch self {
-            case .alpha:
-                return .alpha
-            case .bgra:
-                return .bgra
-            case .rgba16:
-                return .rgba16
-            case .height:
-                return .height
-            case .float:
-                return .float
-            case .float2:
-                return .float2
-            }
-        }
-    }
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public private(set) var texture: MTLTexture?
     public private(set) var pixelBuffer: CVPixelBuffer?
     public private(set) var cvMetalTexture: CVMetalTexture?
@@ -309,7 +283,9 @@ open class Texture2D: NodeUI, @unchecked Sendable {
     public var cgImage: CGImage? {
         let colorSpace = CGColorSpaceCreateDeviceRGB()
         guard let texture = texture else { return nil }
-        guard let image = CIImage(mtlTexture: texture, options: [.colorSpace:colorSpace]) else { return nil }
+        guard let image = CIImage(mtlTexture: texture, options: [.colorSpace: colorSpace]) else {
+            return nil
+        }
         let flipped = image.transformed(by: CGAffineTransform(scaleX: 1, y: -1))
         return CIContext().createCGImage(
             flipped,
@@ -344,40 +320,9 @@ open class Texture2D: NodeUI, @unchecked Sendable {
     #endif
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    static func metal(format: Format) -> MTLPixelFormat {
-        switch format {
-        case .alpha:
-            return MTLPixelFormat.r8Unorm
-        case .bgra:
-            return MTLPixelFormat.bgra8Unorm
-        case .height:
-            return MTLPixelFormat.r16Unorm
-        case .rgba16:
-            return MTLPixelFormat.rgba16Unorm
-        case .float:
-            return MTLPixelFormat.r32Float
-        case .float2:
-            return MTLPixelFormat.rg32Float
-        }
-    }
-    public var format: Format {
+    public var format: Program.Format {
         if let t = texture {
-            switch t.pixelFormat {
-            case .r8Unorm:
-                return .alpha
-            case .r16Unorm:
-                return .height
-            case .bgra8Unorm, .bgra8Unorm_srgb:
-                return .bgra
-            case .r32Float:
-                return .float
-            case .rg32Float:
-                return .float2
-            case .rgba16Unorm:
-                return .rgba16
-            default:
-                fatalError("unknow format")
-            }
+            return Program.Format.from(pixelFormat: t.pixelFormat)
         }
         return .bgra
     }
@@ -435,14 +380,15 @@ open class Texture2D: NodeUI, @unchecked Sendable {
         super.init(parent: parent)
         self.scale = scale
     }
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public init(
         parent: NodeUI, size: Size, scale: Size = Size(1, 1), border: Size = Size.zero,
-        format: Format = .bgra, shared: Bool = false, file: String = #file, line: Int = #line
+        format: Program.Format = .bgra, shared: Bool = false, file: String = #file, line: Int = #line
     ) {
         #if DEBUG
             self.dbgInfo = "Texture.init(file:'\(file)',line:\(line))"
         #endif
-        let pixfmt = Texture2D.metal(format: format)
+        let pixfmt = format.pixelFormat
         self.pixels = size * scale
         super.init(parent: parent)
         self.scale = scale
