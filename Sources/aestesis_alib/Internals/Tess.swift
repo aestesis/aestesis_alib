@@ -18,7 +18,6 @@
 //  limitations under the License.
 
 import Foundation
-
 import libtess
 
 // sample: https://www.opengl.org/archives/resources/code/samples/redbook/tess.c
@@ -28,17 +27,17 @@ import libtess
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 public class Tess {
     public class Primitive {
-        public enum Kind : UInt32 {
+        public enum Kind: UInt32 {
             case triangles = 0x0004
             case triangle_STRIP = 0x0005
             case triangle_FAN = 0x0006
         }
-        public var vertices=[Path.Contour.Vertice]()
-        public private(set) var kind:Kind
-        init(_ i:UInt32) {
-            kind=Kind(rawValue:i)!
+        public var vertices = [Path.Contour.Vertice]()
+        public private(set) var kind: Kind
+        init(_ i: UInt32) {
+            kind = Kind(rawValue: i)!
         }
-        public var description:String {
+        public var description: String {
             switch kind {
             case .triangles:
                 return "triangles, vertices: \(vertices.count)"
@@ -51,41 +50,41 @@ public class Tess {
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    let tess:UnsafeMutableRawPointer
+    let tess: UnsafeMutableRawPointer
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public private(set) var shapes=[Primitive]()
+    public private(set) var shapes = [Primitive]()
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    func begin(_ m:UInt32) {  // TODO: in libtess, try to set swift callback directly in  multithread, and remove all static callbacks, if it work
+    func begin(_ m: UInt32) {  // TODO: in libtess, try to set swift callback directly in  multithread, and remove all static callbacks, if it work
         shapes.append(Primitive(m))
     }
-    func draw(_ v:UnsafeMutableRawPointer) {
+    func draw(_ v: UnsafeMutableRawPointer) {
         let tv = v.assumingMemoryBound(to: Path.Contour.Vertice.self)
-        shapes[shapes.count-1].vertices.append(tv[0])
+        shapes[shapes.count - 1].vertices.append(tv[0])
     }
     func end() {
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public init() {
-        let b:@convention(c) (UInt32) -> () = { (m:UInt32) in
+        let b: @convention(c) (UInt32) -> Void = { (m: UInt32) in
             Tess.current.begin(m)
         }
-        let d:@convention(c) (UnsafeMutableRawPointer?) -> () = { v in
+        let d: @convention(c) (UnsafeMutableRawPointer?) -> Void = { v in
             Tess.current.draw(v!)
         }
-        let e:@convention(c) () -> () = {
+        let e: @convention(c) () -> Void = {
             Tess.current.end()
         }
         tess = tessInit(b, d, e)
-        Tess.current=self
+        Tess.current = self
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    static var current:Tess {
+    static var current: Tess {
         get { return Thread.current["aestesis.alib.tess"] as! Tess }
-        set(t) { Thread.current["aestesis.alib.tess"]=t }
+        set(t) { Thread.current["aestesis.alib.tess"] = t }
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -104,11 +103,12 @@ public class Tess {
         tessEndContour(tess)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func sendVertex(_ vertex:[Path.Contour.Vertice]) {
+    public func sendVertex(_ vertex: [Path.Contour.Vertice]) {
         let ptr = unsafeBitCast(vertex, to: UnsafeMutableRawPointer.self)
         //let test = ptr.advanced(by: 32).assumingMemoryBound(to: Path.Contour.Vertice.self)
         //let td = ptr.advanced(by: 32).assumingMemoryBound(to: Double.self)
         let pv = ptr.advanced(by: 32).assumingMemoryBound(to: TessVertex.self)
+
         // WTF? apple bug, advance by 32 to override it...  // fragile
         tessSendVertex(tess, pv, Int32(vertex.count))
     }
