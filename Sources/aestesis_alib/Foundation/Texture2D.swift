@@ -307,14 +307,15 @@ open class Texture2D: NodeUI, @unchecked Sendable {
     }
 
     public var cgImage: CGImage? {
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
         guard let texture = texture else { return nil }
-        guard let image = CIImage(mtlTexture: texture, options: nil) else { return nil }
+        guard let image = CIImage(mtlTexture: texture, options: [.colorSpace:colorSpace]) else { return nil }
         let flipped = image.transformed(by: CGAffineTransform(scaleX: 1, y: -1))
         return CIContext().createCGImage(
             flipped,
             from: flipped.extent,
             format: CIFormat.RGBA8,
-            colorSpace: CGColorSpace(name: CGColorSpace.linearSRGB)!)
+            colorSpace: colorSpace)
     }
 
     #if os(iOS) || os(tvOS)
