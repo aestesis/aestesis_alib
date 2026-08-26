@@ -1114,6 +1114,21 @@ open class Graphics: NodeUI, @unchecked Sendable {
         super.init(parent: viewport)
     }
     public init(
+        texture: Texture3D, slice: Int, clear: Color? = nil, clip: Rect? = nil,
+        viewport: Viewport? = nil
+    ) {
+        let size = Size(texture.size.x, texture.size.y)
+        let bounds = Rect(origin: .zero, size: size)
+        let m = Mat4.gpu(size: size)
+        self.matrix = m
+        self.output = size
+        self.scale = Size.unity
+        self.clip = Graphics.transformClip(m, (clip ?? bounds))
+        self.render = RenderPass(texture: texture, slice: slice, clear: clear, viewport: viewport)
+        renderOwner = true
+        super.init(parent: viewport ?? texture)
+    }
+    public init(
         image: Bitmap, clear: Color? = nil, depthClear: Double? = nil, depthStore: Bool = false,
         clip: Rect? = nil, viewport: Viewport? = nil
     ) {
