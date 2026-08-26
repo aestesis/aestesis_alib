@@ -20,7 +20,7 @@
 import Foundation
 
 public class Debug {
-    nonisolated(unsafe) public static var codeRoot = "/aestesis-swift/"
+    nonisolated(unsafe) public static var codeRoot = "/git/"
     static func log(_ t: String) {
         NSLog("%@ %@", "\(Application.name):", t)
     }
