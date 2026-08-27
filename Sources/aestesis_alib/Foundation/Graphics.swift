@@ -1114,7 +1114,7 @@ open class Graphics: NodeUI, @unchecked Sendable {
         super.init(parent: viewport)
     }
     public init(
-        texture: Texture3D, slice: Int, clear: Color? = nil, clip: Rect? = nil,
+        texture: Texture3D, depthPlane: Int, clear: Color? = nil, clip: Rect? = nil,
         viewport: Viewport? = nil
     ) {
         let size = Size(texture.size.x, texture.size.y)
@@ -1124,7 +1124,7 @@ open class Graphics: NodeUI, @unchecked Sendable {
         self.output = size
         self.scale = Size.unity
         self.clip = Graphics.transformClip(m, (clip ?? bounds))
-        self.render = RenderPass(texture: texture, slice: slice, clear: clear, viewport: viewport)
+        self.render = RenderPass(texture: texture, depthPlane: depthPlane, clear: clear, viewport: viewport)
         renderOwner = true
         super.init(parent: viewport ?? texture)
     }

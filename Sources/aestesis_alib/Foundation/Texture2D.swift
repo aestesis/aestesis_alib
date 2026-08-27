@@ -75,7 +75,7 @@ open class Texture2D: NodeUI, @unchecked Sendable {
     public var display: Size {
         return Size(
             (pixels.width - border.width * 2) * pixel.width,
-            (pixels.height - border.height) * pixel.height)
+            (pixels.height - border.height * 2) * pixel.height)
     }
     public var scale: Size {
         get { return Size.unity / pixel }

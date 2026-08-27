@@ -176,6 +176,8 @@ public class RenderPass: NodeUI, @unchecked Sendable {
                     originX: 0, originY: 0, width: texture.pixels.width,
                     height: texture.pixels.height,
                     znear: 0, zfar: 1))
+        } else {
+            Debug.info("failed to create command encoder")
         }
         cb.addCompletedHandler({ (cb: MTLCommandBuffer) in
             if cb.status == .error {
@@ -219,13 +221,14 @@ public class RenderPass: NodeUI, @unchecked Sendable {
         })
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    init(texture: Texture3D, slice: Int, clear: Color? = nil, viewport: Viewport? = nil) {
+    init(texture: Texture3D, depthPlane: Int, clear: Color? = nil, viewport: Viewport? = nil) {
         let vp = viewport ?? texture.viewport!
         cb = vp.gpu.queue.makeCommandBuffer()!
         format = texture.format
         super.init(parent: vp)
         let descriptor = MTLRenderPassDescriptor()
         descriptor.colorAttachments[0].texture = texture.texture
+        descriptor.colorAttachments[0].depthPlane = depthPlane
         if let c = clear {
             descriptor.colorAttachments[0].loadAction = MTLLoadAction.clear
             descriptor.colorAttachments[0].clearColor = MTLClearColorMake(c.r, c.g, c.b, c.a)
@@ -238,9 +241,11 @@ public class RenderPass: NodeUI, @unchecked Sendable {
         if let cm = command {
             cm.setViewport(
                 MTLViewport(
-                    originX: 0, originY: 0, width: texture.size.x,
-                    height: texture.size.y,
+                    originX: 0, originY: 0, width: size.width,
+                    height: size.height,
                     znear: 0, zfar: 1))
+        } else {
+            Debug.info("failed to create command encoder")
         }
         cb.addCompletedHandler({ (cb: MTLCommandBuffer) in
             if cb.status == .error {
@@ -297,6 +302,8 @@ public class RenderPass: NodeUI, @unchecked Sendable {
                 MTLViewport(
                     originX: 0, originY: 0, width: vsize.width, height: vsize.height, znear: 0,
                     zfar: 1))
+        } else {
+            Debug.info("failed to create command encoder")
         }
         super.init(parent: viewport)
         cb.addCompletedHandler({ (cb: MTLCommandBuffer) in
