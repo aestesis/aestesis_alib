@@ -292,7 +292,27 @@ public struct EQ {
     }
     public init() {
     }
+    public subscript(index: Int) -> Float {
+        get {
+            switch index {
+            case 0: return low
+            case 1: return medium
+            case 2: return high
+            default: return 0
+            }
+        }
+        set(v) {
+            switch index {
+            case 0: low = v
+            case 1: medium = v
+            case 2: high = v
+            default: break
+            }
+
+        }
+    }
 }
+
 public func == (l: EQ, r: EQ) -> Bool {
     return l.high == r.high && l.medium == r.medium && l.low == r.low
 }
