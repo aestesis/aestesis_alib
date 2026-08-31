@@ -74,6 +74,18 @@ open class Graphics: NodeUI, @unchecked Sendable {
         render.draw(trianglestrip: 4)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    public func fill(rect: Rect, blend: BlendMode = BlendMode.opaque, colors: ColorRect) {
+        program("program.color", blend: blend)
+        uniforms(matrix)
+        let p = rect.strip5
+        let c = colors.strip5
+        let vert = colorVertices(p.count)
+        for i in 0..<p.count {
+            vert[i] = ColorVertice(position: p[i].infloat3, color: c[i].infloat4)
+        }
+        render.draw(trianglestrip: p.count)
+    }
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public func draw(
         rect: Rect, image: Bitmap, from: Rect? = nil, lut: Texture3D? = nil,
         blend: BlendMode = BlendMode.opaque, color: Color = Color.white,
@@ -104,6 +116,39 @@ open class Graphics: NodeUI, @unchecked Sendable {
             render.use(texture: lut, atIndex: 1)
         }
         render.draw(trianglestrip: 4)
+    }
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    public func draw(
+        rect: Rect, image: Bitmap, from: Rect? = nil, lut: Texture3D? = nil,
+        blend: BlendMode = BlendMode.opaque, colors: ColorRect
+
+    ) {
+        var wrap = false
+        if lut == nil {
+            program("program.texture", blend: blend)
+        } else {
+            program("program.lut", blend: blend)
+        }
+        uniforms(matrix)
+        let points = rect.strip5
+        let vert = textureVertices(points.count)
+        var rs = Rect(x: 0, y: 0, w: 1, h: 1)
+        if let r = from {
+            rs = r / image.size
+            wrap = rs.left < 0 || rs.top < 0 || rs.right > 1 || rs.bottom > 1  // TODO: separate U and V wrap
+        }
+        let uv = rs.strip5
+        let c = colors.strip5
+        for i in 0...points.count {
+            vert[i] = TextureVertice(
+                position: points[i].infloat3, uv: uv[i].infloat2, color: c[i].infloat4)
+        }
+        sampler(wrap ? "sampler.wrap" : "sampler.clamp")
+        render.use(texture: image)
+        if let lut = lut {
+            render.use(texture: lut, atIndex: 1)
+        }
+        render.draw(trianglestrip: points.count)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public func draw(
@@ -1124,7 +1169,8 @@ open class Graphics: NodeUI, @unchecked Sendable {
         self.output = size
         self.scale = Size.unity
         self.clip = Graphics.transformClip(m, (clip ?? bounds))
-        self.render = RenderPass(texture: texture, depthPlane: depthPlane, clear: clear, viewport: viewport)
+        self.render = RenderPass(
+            texture: texture, depthPlane: depthPlane, clear: clear, viewport: viewport)
         renderOwner = true
         super.init(parent: viewport ?? texture)
     }
