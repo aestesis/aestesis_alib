@@ -56,6 +56,12 @@ public extension Vec3 {
         self.y=p.y
         self.z=z
     }
+    init(_ s:Size,z:Double=0) {
+        self.init()
+        self.x=s.w
+        self.y=s.h
+        self.z=z
+    }
     init(phi:Double, theta:Double) {
         self.init()
         let stheta = sin(theta)

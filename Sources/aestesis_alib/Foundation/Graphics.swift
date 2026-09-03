@@ -250,36 +250,56 @@ open class Graphics: NodeUI, @unchecked Sendable {
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public func draw(
-        strip vs: [Vertice], image: Bitmap, sampler smp: String = "sampler.clamp",
+        strip vs: [Vertice], image: Bitmap? = nil, sampler smp: String = "sampler.clamp",
         blend: BlendMode = BlendMode.opaque
     ) {
-        program("program.texture", blend: blend)
         uniforms(matrix)
-        let vert = textureVertices(vs.count)
-        for i in 0..<vs.count {
-            let v = vs[i]
-            vert[i] = TextureVertice(
-                position: v.position.infloat3, uv: v.uv.infloat2, color: v.color.infloat4)
-        }
         sampler(smp)
-        render.use(texture: image)
+        if let image = image {
+            program("program.texture", blend: blend)
+            render.use(texture: image)
+            let vert = textureVertices(vs.count)
+            for i in 0..<vs.count {
+                let v = vs[i]
+                vert[i] = TextureVertice(
+                    position: v.position.infloat3, uv: v.uv.infloat2, color: v.color.infloat4)
+            }
+        } else {
+            program("program.color", blend: blend)
+            let vert = colorVertices(vs.count)
+            for i in 0..<vs.count {
+                let v = vs[i]
+                vert[i] = ColorVertice(
+                    position: v.position.infloat3, color: v.color.infloat4)
+            }
+        }
         render.draw(trianglestrip: vs.count)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public func draw(
-        triangle vs: [Vertice], image: Bitmap, sampler smp: String = "sampler.clamp",
+        triangle vs: [Vertice], image: Bitmap? = nil, sampler smp: String = "sampler.clamp",
         blend: BlendMode = BlendMode.opaque
     ) {
-        program("program.texture", blend: blend)
         uniforms(matrix)
-        let vert = textureVertices(vs.count)
-        for i in 0..<vs.count {
-            let v = vs[i]
-            vert[i] = TextureVertice(
-                position: v.position.infloat3, uv: v.uv.infloat2, color: v.color.infloat4)
-        }
         sampler(smp)
-        render.use(texture: image)
+        if let image = image {
+            program("program.texture", blend: blend)
+            render.use(texture: image)
+            let vert = textureVertices(vs.count)
+            for i in 0..<vs.count {
+                let v = vs[i]
+                vert[i] = TextureVertice(
+                    position: v.position.infloat3, uv: v.uv.infloat2, color: v.color.infloat4)
+            }
+        } else {
+            program("program.color", blend: blend)
+            let vert = colorVertices(vs.count)
+            for i in 0..<vs.count {
+                let v = vs[i]
+                vert[i] = ColorVertice(
+                    position: v.position.infloat3, color: v.color.infloat4)
+            }
+        }
         render.draw(triangle: vs.count)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1737,6 +1757,9 @@ public struct Vertice {  // public version
     }
     var textureVertice: TextureVertice {
         return TextureVertice(position: position.infloat3, uv: uv.infloat2, color: color.infloat4)
+    }
+    var colorVertice: ColorVertice {
+        return ColorVertice(position: position.infloat3, color: color.infloat4)
     }
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
