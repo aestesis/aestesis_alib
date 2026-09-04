@@ -34,6 +34,9 @@ import Foundation
 public class Texture3D: NodeUI, @unchecked Sendable {
     public private(set) var texture: MTLTexture?
     public private(set) var size: Vec3
+    public var mtlSize: MTLSize {
+        return MTLSizeMake(texture!.width, texture!.height, texture!.depth)
+    }
     public init(parent: NodeUI, size: Int, pixels: [UInt32]? = nil, renderTarget: Bool = false) {
         self.size = Vec3(Double(size), Double(size), Double(size))
         super.init(parent: parent)
@@ -100,12 +103,35 @@ public class Texture3D: NodeUI, @unchecked Sendable {
             }
         }
     }
+
+    public func fill(hsv: Vec3, fn: ((ComputePass.Result) -> Void)? = nil) throws {
+        let compute = ComputePass(parent: self)
+        try compute.use(kernel: "kernelLutHsvDecal")
+        compute.use(texture: self)
+        let p = LutHsvDecal(decal: hsv.infloat3)
+        let b = viewport!.gpu.buffers.get(MemoryLayout<LutHsvDecal>.stride)
+        let ptr = b.ptr.assumingMemoryBound(to: LutHsvDecal.self)
+        ptr[0] = p
+        compute.use(buffer: b)
+        compute.use(size: mtlSize, threads: MTLSize(width: 8, height: 8, depth: 1))
+        compute.onDone.once { result in
+            b.recycle()
+            fn?(result)
+        }
+        compute.commit()
+    }
+
     public var format: Program.Format {
         if let t = texture {
             return Program.Format.from(pixelFormat: t.pixelFormat)
         }
         return .bgra
     }
+}
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+private struct LutHsvDecal {
+    var decal: SIMD3<Float>
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////

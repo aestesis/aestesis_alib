@@ -1213,3 +1213,31 @@ fragment half4 fragmentTexturePoint4LightFunc(  Vertex3dOut v [[stage_in]],
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
+struct LutHsvDecal {
+    float3 decal;
+};
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+kernel void kernelLutHsvDecal(
+    texture3d<float, access::write> texture [[texture(0)]],
+    uint3 gpos [[thread_position_in_grid]],
+    constant LutHsvDecal &params[[buffer(1)]])
+{
+    uint w = texture.get_width();
+    uint h = texture.get_height();
+    uint d = texture.get_depth();
+    if (gpos.x >= w || gpos.y >= h || gpos.z >= d) {
+        return;
+    }
+    half r = static_cast<half>(gpos.x)/static_cast<half>(w-1);
+    half g = static_cast<half>(gpos.y)/static_cast<half>(h-1);
+    half b = static_cast<half>(gpos.z)/static_cast<half>(d-1);
+    half3 rgb = half3(r,g,b);
+
+    half3 h = rgb2hsv(rgb)+half3(params.decal);
+    h.x = fract(h.x);
+    h.yz = saturate(h.yz);
+    half4 color = half4(hsv2rgb(h),1);
+    texture.write(color, gpos);
+}
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
