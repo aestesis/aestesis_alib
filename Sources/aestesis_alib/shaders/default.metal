@@ -1218,9 +1218,9 @@ struct LutHsvDecal {
 };
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 kernel void kernelLutHsvDecal(
-    texture3d<float, access::write> texture [[texture(0)]],
+    texture3d<half, access::write> texture [[texture(0)]],
     uint3 gpos [[thread_position_in_grid]],
-    constant LutHsvDecal &params[[buffer(1)]])
+    constant LutHsvDecal &params[[buffer(0)]])
 {
     uint w = texture.get_width();
     uint h = texture.get_height();
@@ -1233,10 +1233,10 @@ kernel void kernelLutHsvDecal(
     half b = static_cast<half>(gpos.z)/static_cast<half>(d-1);
     half3 rgb = half3(r,g,b);
 
-    half3 h = rgb2hsv(rgb)+half3(params.decal);
-    h.x = fract(h.x);
-    h.yz = saturate(h.yz);
-    half4 color = half4(hsv2rgb(h),1);
+    half3 hsv = rgb2hsv(rgb)+half3(params.decal);
+    hsv.x = fract(hsv.x);
+    hsv.yz = saturate(hsv.yz);
+    half4 color = half4(hsv2rgb(hsv),1);
     texture.write(color, gpos);
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
