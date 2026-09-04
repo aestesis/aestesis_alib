@@ -699,33 +699,6 @@ open class Graphics: NodeUI, @unchecked Sendable {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct GenerateLutHsvDecal {
-        var size: Float
-        var decal: SIMD3<Float>
-    }
-    func generateLutHsvDecalParams(size: Int, decal: Vec3) {
-        let p = GenerateLutHsvDecal(size: Float(size), decal: decal.infloat3)
-        let b = buffer(MemoryLayout<GenerateLutHsvDecal>.stride)
-        let ptr = b.ptr.assumingMemoryBound(to: GenerateLutHsvDecal.self)
-        ptr[0] = p
-        render.use(fragmentBuffer: b, atIndex: 0)
-    }
-    public func generateLut(_ rect: Rect, lutSize: Int, hsvDecal: Vec3) {
-        program("program.generate.lut", blend: BlendMode.copy)
-        uniforms(matrix)
-        generateLutHsvDecalParams(size: lutSize, decal: hsvDecal)
-        let vert = textureVertices(4)
-        let strip = rect.strip
-        let rs = Rect(x: 0, y: 0, w: 1, h: 1)
-        let uv = rs.strip
-        for i in 0...3 {
-            vert[i] = TextureVertice(
-                position: strip[i].infloat3, uv: uv[i].infloat2, color: Color.white.infloat4)
-        }
-        render.draw(trianglestrip: 4)
-    }
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
     func blurParam(_ p: SIMD2<Float>) {
         let b = buffer(MemoryLayout<SIMD2<Float>>.stride)
         let ptr = b.ptr.assumingMemoryBound(to: SIMD2<Float>.self)
@@ -1657,11 +1630,6 @@ open class Graphics: NodeUI, @unchecked Sendable {
         viewport["program.blend.exclusion"] = Program(
             viewport: viewport, vertex: "blendFuncVertex", fragment: "blendExclusion",
             blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
-
-        Program.populateDefaultBlendModes(
-            store: viewport, key: "program.generate.lut", library: viewport.gpu.library,
-            vertex: "textureFuncVertex", fragment: "generateLutHsvDecal",
-            vertexFormat: [.float3, .float4, .float2])
         Program.populateDefaultBlendModes(
             store: viewport, key: "program.lut", library: viewport.gpu.library,
             vertex: "textureFuncVertex", fragment: "textureLutFragment",

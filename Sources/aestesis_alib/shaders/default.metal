@@ -326,19 +326,6 @@ vertex TextureMaskVertice textureBitmapMaskFuncVertex(const device TextureMaskVe
     return vout;
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
-struct GenerateLutHsvDecal {
-    float size;
-    float3 decal;
-};
-fragment half4 generateLutHsvDecal(TextureVertice v [[stage_in]], constant GenerateLutHsvDecal &params[[buffer(0)]]) {
-    half d = v.uv.x * params.size;
-    half3 c = half3(fract(d),floor(d)/params.size,v.uv.y);
-    half3 h = rgb2hsv(c.rgb)+half3(params.decal);
-    h.x = fract(h.x);
-    h.yz = saturate(h.yz);
-    return half4(hsv2rgb(h),1)*v.color;
-}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
 fragment half4 textureLutFragment(TextureVertice v [[stage_in]], texture2d<half> t [[texture(0)]], texture3d<half> lut [[texture(1)]], sampler s [[sampler(0)]])
 {
     constexpr sampler ss = sampler(mag_filter::linear, min_filter::linear, mip_filter::linear, address::clamp_to_edge);
