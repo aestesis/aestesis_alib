@@ -437,6 +437,7 @@ public class Program: NodeUI, @unchecked Sendable {
         case rgba16
         case float
         case float2
+        case float4
         var pixelFormat: MTLPixelFormat {
             switch self {
             case .alpha:
@@ -451,6 +452,8 @@ public class Program: NodeUI, @unchecked Sendable {
                 return .r32Float
             case .float2:
                 return .rg32Float
+            case .float4:
+                return .rgba32Float
             }
         }
         var depthFormat: MTLPixelFormat {
@@ -475,6 +478,8 @@ public class Program: NodeUI, @unchecked Sendable {
                 return .float2
             case .rgba16Unorm:
                 return .rgba16
+            case .rgba32Float:
+                return .float4
             default:
                 fatalError("unknow format")
             }
