@@ -789,12 +789,14 @@ public class Buffers: NodeUI, @unchecked Sendable {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 public class ProgramLibrary: NodeUI, @unchecked Sendable {
+    let key: String
     var lib: MTLLibrary?
     public init(
         parent: NodeUI, device: MTLDevice, bundle: Bundle? = nil, name: String = "default"
     ) {
-        super.init(parent: parent)
         let b = bundle ?? Bundle.alib
+        key = "program.library.\(b).\(name)"
+        super.init(parent: parent)
         let libpath = b.path(forResource: name, ofType: "metallib")
         if let libpath = libpath {
             do {
@@ -808,7 +810,6 @@ public class ProgramLibrary: NodeUI, @unchecked Sendable {
             Debug.error(
                 "can't find metal library \(name).metallib in \(b.bundleURL)"
             )
-
         }
     }
 }

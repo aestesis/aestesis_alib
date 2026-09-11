@@ -65,11 +65,13 @@ public class ComputePass: NodeUI, @unchecked Sendable {
     public func use(kernel: ComputeKernel) {
         encoder.setComputePipelineState(kernel.pipeline)
     }
-    public func use(kernel: String) throws {
-        if let k = viewport!["kernel.\(kernel)"] as? ComputeKernel {
+    public func use(kernel: String, library: ProgramLibrary? = nil) throws {
+        let l = library ?? viewport!.gpu.library
+        let key = "kernel.\(l.key).\(kernel)"
+        if let k = self[key] as? ComputeKernel {
             use(kernel: k)
         } else {
-            let k = try ComputeKernel(viewport: viewport!, kernel: kernel)
+            let k = try ComputeKernel(viewport: viewport!, library: l, kernel: kernel)
             use(kernel: k)
         }
     }
