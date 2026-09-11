@@ -507,7 +507,7 @@ public class Viewport: NodeUI, @unchecked Sendable {
         Debug.warning("Viewport.init(\(size))  orientation:\(self.orientation)")
         _gpu = GPU(
             device: device,
-            library: ProgramLibrary(parent: self, device: device, filename: "default"),
+            library: ProgramLibrary(parent: self, device: device, name: "default"),
             loader: MTKTextureLoader(device: device), buffers: Buffers(viewport: self))
         _size = size
         Graphics.globals(self)
@@ -553,6 +553,20 @@ public class Viewport: NodeUI, @unchecked Sendable {
             return b
         }
         return false
+    }
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    public func library(bundle: Bundle, name: String) -> ProgramLibrary {
+        if bundle == Bundle.alib && name == "default" {
+            return gpu.library
+        }
+        let key = "program.library.\(bundle).\(name)"
+        if let lib = self[key] as? ProgramLibrary {
+            return lib
+        }
+        let lib = ProgramLibrary(parent: self, device: gpu.device, bundle: bundle, name: name)
+        self[key] = lib
+        return lib
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////

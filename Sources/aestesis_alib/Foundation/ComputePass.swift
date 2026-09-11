@@ -66,7 +66,7 @@ public class ComputePass: NodeUI, @unchecked Sendable {
         encoder.setComputePipelineState(kernel.pipeline)
     }
     public func use(kernel: String) throws {
-        if let k = viewport!.gpu.library["kernel.\(kernel)"] as? ComputeKernel {
+        if let k = viewport!["kernel.\(kernel)"] as? ComputeKernel {
             use(kernel: k)
         } else {
             let k = try ComputeKernel(viewport: viewport!, kernel: kernel)
@@ -79,14 +79,11 @@ public class ComputePass: NodeUI, @unchecked Sendable {
 public class ComputeKernel: NodeUI, @unchecked Sendable {
     let function: MTLFunction
     let pipeline: MTLComputePipelineState
-    public convenience init(viewport: Viewport, kernel: String) throws {
-        try self.init(device: viewport.gpu.device, library: viewport.gpu.library, kernel: kernel)
-    }
-    public init(device: MTLDevice, library: ProgramLibrary, kernel: String) throws {
-        function = library.lib!.makeFunction(name: kernel)!
-        pipeline = try device.makeComputePipelineState(function: function)
+    public init(viewport: Viewport, library: ProgramLibrary? = nil, kernel: String) throws {
+        function = (library ?? viewport.gpu.library).lib!.makeFunction(name: kernel)!
+        pipeline = try viewport.gpu.device.makeComputePipelineState(function: function)
         super.init(parent: library)
-        library["kernel.\(kernel)"] = self
+        viewport["kernel.\(kernel)"] = self
     }
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -536,7 +536,7 @@ public class Program: NodeUI, @unchecked Sendable {
             rps[.height] = self.createPipelineState(
                 library, vertex: vertex, fragment: fragment, blend: blend, vdesc: vdesc,
                 format: .height)
-        case .alpha, .bgra, .bgraDepth, .rgba16, .float, .float2:
+        case .alpha, .bgra, .bgraDepth, .rgba16, .float, .float2, .float4:
             let vertexFloat: String = floatShaders ? "\(vertex)_float" : vertex
             let fragmentFloat: String = floatShaders ? "\(fragment)_float" : fragment
             rps[.alpha] = self.createPipelineState(
@@ -554,6 +554,9 @@ public class Program: NodeUI, @unchecked Sendable {
             rps[.float2] = self.createPipelineState(
                 library, vertex: vertexFloat, fragment: fragmentFloat, blend: blend, vdesc: vdesc,
                 format: .float2)
+            rps[.float4] = self.createPipelineState(
+                library, vertex: vertexFloat, fragment: fragmentFloat, blend: blend, vdesc: vdesc,
+                format: .float4)
             rps[.bgraDepth] = self.createPipelineState(
                 library, vertex: vertex, fragment: fragment, blend: blend, vdesc: vdesc,
                 format: .bgraDepth)
@@ -788,22 +791,22 @@ public class Buffers: NodeUI, @unchecked Sendable {
 public class ProgramLibrary: NodeUI, @unchecked Sendable {
     var lib: MTLLibrary?
     public init(
-        parent: NodeUI, device: MTLDevice, bundle: Bundle? = nil, filename: String = "default"
+        parent: NodeUI, device: MTLDevice, bundle: Bundle? = nil, name: String = "default"
     ) {
         super.init(parent: parent)
         let b = bundle ?? Bundle.alib
-        let libpath = b.path(forResource: filename, ofType: "metallib")
+        let libpath = b.path(forResource: name, ofType: "metallib")
         if let libpath = libpath {
             do {
                 lib = try device.makeLibrary(URL: Foundation.URL(string: libpath)!)
             } catch {
                 Debug.error(
-                    "can't load metal library \(filename).metallib in \(b.bundleURL)"
+                    "can't load metal library \(name).metallib in \(b.bundleURL)"
                 )
             }
         } else {
             Debug.error(
-                "can't find metal library \(filename).metallib in \(b.bundleURL)"
+                "can't find metal library \(name).metallib in \(b.bundleURL)"
             )
 
         }
