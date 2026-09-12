@@ -21,7 +21,7 @@ public class ComputePass: NodeUI, @unchecked Sendable {
         onDone.removeAll()
         super.detach()
     }
-    init(parent: NodeUI) {
+    public init(parent: NodeUI) {
         cb = parent.viewport!.gpu.queue.makeCommandBuffer()!
         encoder = cb.makeComputeCommandEncoder()!
         super.init(parent: parent.viewport)
@@ -43,7 +43,17 @@ public class ComputePass: NodeUI, @unchecked Sendable {
         encoder.endEncoding()
         cb.commit()
     }
-    public func use(size: MTLSize, threads block: MTLSize) {
+    public func wait(fence:MTLFence) {
+        encoder.waitForFence(fence)
+    }
+    public func update() -> MTLFence? {
+        let fence = viewport?.gpu.device.makeFence()
+        if let fence = fence {
+            encoder.updateFence(fence)
+        }
+        return fence
+    }
+    public func dispatch(size: MTLSize, threads block: MTLSize) {
         let groups = MTLSizeMake(
             size.width / block.width,
             size.height / block.height,
@@ -67,13 +77,21 @@ public class ComputePass: NodeUI, @unchecked Sendable {
     }
     public func use(kernel: String, library: ProgramLibrary? = nil) throws {
         let l = library ?? viewport!.gpu.library
-        let key = "kernel.\(l.key).\(kernel)"
-        if let k = self[key] as? ComputeKernel {
-            use(kernel: k)
-        } else {
-            let k = try ComputeKernel(viewport: viewport!, library: l, kernel: kernel)
-            use(kernel: k)
+        let k = try ComputePass.register(kernel: kernel, library: l)
+        use(kernel: k)
+    }
+
+    public static func register(kernel: String, library: ProgramLibrary) throws -> ComputeKernel {
+        guard let viewport = library.viewport else {
+            throw ComputePassError.detached
         }
+        let key = "kernel.\(library.key).\(kernel)"
+        if let k = library[key] as? ComputeKernel {
+            return k
+        }
+        let k = try ComputeKernel(viewport: viewport, library: library, kernel: kernel)
+        viewport[key] = k
+        return k
     }
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -85,8 +103,12 @@ public class ComputeKernel: NodeUI, @unchecked Sendable {
         function = (library ?? viewport.gpu.library).lib!.makeFunction(name: kernel)!
         pipeline = try viewport.gpu.device.makeComputePipelineState(function: function)
         super.init(parent: library)
-        viewport["kernel.\(kernel)"] = self
     }
+}
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+enum ComputePassError: Error {
+    case detached
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////

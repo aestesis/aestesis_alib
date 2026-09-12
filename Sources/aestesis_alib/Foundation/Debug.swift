@@ -31,6 +31,11 @@ public class Debug {
         }
         return f
     }
+    public static func info(_ t: Error, _ f: String = #file, _ l: Int = #line) {
+        #if DEBUG
+            log("🗯 \(t.localizedDescription)  \(truncfile(f)):\(l)")
+        #endif
+    }
     public static func info(_ t: String, _ f: String = #file, _ l: Int = #line) {
         #if DEBUG
             log("🗯 \(t)  \(truncfile(f)):\(l)")

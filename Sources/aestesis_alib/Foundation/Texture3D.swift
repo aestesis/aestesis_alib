@@ -46,7 +46,8 @@ public class Texture3D: NodeUI, @unchecked Sendable {
         textureDescriptor.width = size
         textureDescriptor.height = size
         textureDescriptor.depth = size
-        textureDescriptor.usage = renderTarget ? [.shaderRead, .renderTarget] : [.shaderRead]
+        textureDescriptor.usage =
+            renderTarget ? [.shaderRead, .shaderWrite, .renderTarget] : [.shaderRead]
         self.texture = viewport?.gpu.device.makeTexture(descriptor: textureDescriptor)
         if let texture = texture, let pixels = pixels {
             pixels.withUnsafeBytes { bytes in
@@ -108,14 +109,9 @@ public class Texture3D: NodeUI, @unchecked Sendable {
         let compute = ComputePass(parent: self)
         try compute.use(kernel: "kernelLutHsvDecal")
         compute.use(texture: self)
-        let p = LutHsvDecal(decal: hsv.infloat3)
-        let b = viewport!.gpu.buffers.get(MemoryLayout<LutHsvDecal>.stride)
-        let ptr = b.ptr.assumingMemoryBound(to: LutHsvDecal.self)
-        ptr[0] = p
-        compute.use(buffer: b)
-        compute.use(size: mtlSize, threads: MTLSize(width: 8, height: 8, depth: 1))
+        compute.use(params: LutHsvDecal(decal: hsv.infloat3))
+        compute.dispatch(size: mtlSize, threads: MTLSize(width: 8, height: 8, depth: 1))
         compute.onDone.once { result in
-            b.recycle()
             fn?(result)
         }
         compute.commit()
@@ -132,6 +128,17 @@ public class Texture3D: NodeUI, @unchecked Sendable {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 private struct LutHsvDecal {
     var decal: SIMD3<Float>
+}
+extension ComputePass {
+    fileprivate func use(params: LutHsvDecal) {
+        let b = viewport!.gpu.buffers.get(MemoryLayout<LutHsvDecal>.stride)
+        let ptr = b.ptr.assumingMemoryBound(to: LutHsvDecal.self)
+        ptr[0] = params
+        use(buffer: b)
+        onDone.once { result in
+            b.recycle()
+        }
+    }
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
