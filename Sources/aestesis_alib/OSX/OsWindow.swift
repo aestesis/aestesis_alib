@@ -44,7 +44,7 @@
          super.init(coder:coder)
          }
          */
-        public init(frame: NSRect, title: String, splash: String? = nil) {
+        public init(frame: NSRect, title: String, splash: String? = nil, threads: Bool = true) {
             Application.launches += 1
             super.init(
                 contentRect: frame,
@@ -61,7 +61,7 @@
             self.view = OsView(
                 frame: CGRect(
                     x: frame.origin.x, y: frame.origin.y, width: frame.width, height: frame.height),
-                device: MTLCreateSystemDefaultDevice())
+                device: MTLCreateSystemDefaultDevice(),threads: threads)
             self.view!.autoresizingMask = [.width, .height]
             self.contentView = view
             if let filename = splash {
