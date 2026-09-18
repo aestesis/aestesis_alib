@@ -188,7 +188,8 @@ public class Socket: Stream<UInt8>, @unchecked Sendable {
                                 s.close()
                                 break
                             } else if done < 0 {  // error
-                                s.onError.dispatch(AlibError("broken connection  \(s.host):\(s.port)"))
+                                s.onError.dispatch(
+                                    AlibError("broken connection  \(s.host):\(s.port)"))
                                 s.close()
                                 break
                             }
@@ -208,7 +209,8 @@ public class Socket: Stream<UInt8>, @unchecked Sendable {
         self.host = host
         self.port = port
         super.init(timeout: timeout)
-        Socket.queue.async {
+        Socket.queue.async { [weak self] in
+            guard let self = self else { return }
             var readStream: Unmanaged<CFReadStream>?
             var writeStream: Unmanaged<CFWriteStream>?
             CFStreamCreatePairWithSocketToHost(

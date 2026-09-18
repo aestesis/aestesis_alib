@@ -456,8 +456,8 @@ import Foundation
                 let b = Bitmap(parent: self.viewport!, size: bf.size)
                 let g = Graphics(image: b, clear: color)
                 g.draw(rect: b.bounds, image: bf, blend: .setAlpha, color: color)
-                g.onDone { [weak self] _ in
-                    guard let self = self, self.attached else { return }
+                g.onDone { _ in
+                    guard self.attached else { return }
                     bitmap(b)
                 }
             }
