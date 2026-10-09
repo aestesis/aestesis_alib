@@ -96,39 +96,7 @@ open class Graphics: NodeUI, @unchecked Sendable {
     public func draw(
         rect: Rect, image: Bitmap, from: Rect? = nil, lut: Texture3D? = nil,
         blend: BlendMode = BlendMode.opaque, color: Color = Color.white,
-        sourceRotation: Rotation = Rotation.none
-    ) {
-        var wrap = false
-        if lut == nil {
-            program("program.texture", blend: blend)
-        } else {
-            program("program.lut", blend: blend)
-        }
-        uniforms(matrix)
-        let vert = textureVertices(4)
-        let strip = rect.strip
-        var rs = Rect(x: 0, y: 0, w: 1, h: 1)
-        if let r = from {
-            rs = r / image.size
-            wrap = rs.left < 0 || rs.top < 0 || rs.right > 1 || rs.bottom > 1  // TODO: separate U and V wrap
-        }
-        let uv = rs.strip(rotation: sourceRotation)
-        for i in 0...3 {
-            vert[i] = TextureVertice(
-                position: strip[i].infloat3, uv: uv[i].infloat2, color: color.infloat4)
-        }
-        sampler(wrap ? "sampler.wrap" : "sampler.clamp")
-        render.use(texture: image)
-        if let lut = lut {
-            render.use(texture: lut, atIndex: 1)
-        }
-        render.draw(trianglestrip: 4)
-    }
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    public func draw(
-        rect: Rect, image: Bitmap, from: Rect? = nil, lut: Texture3D? = nil,
-        blend: BlendMode = BlendMode.opaque, color: Color = Color.white,
-        rotation: Double = 0
+        rotation: Double = 0, imageRotation: Rotation = .none
     ) {
         var wrap = false
         if lut == nil {
@@ -144,7 +112,7 @@ open class Graphics: NodeUI, @unchecked Sendable {
             rs = r / image.size
             wrap = rs.left < 0 || rs.top < 0 || rs.right > 1 || rs.bottom > 1  // TODO: separate U and V wrap
         }
-        let uv = rs.strip
+        let uv = rs.strip(rotation: imageRotation)
         for i in 0...3 {
             vert[i] = TextureVertice(
                 position: strip[i].infloat3, uv: uv[i].infloat2, color: color.infloat4)
