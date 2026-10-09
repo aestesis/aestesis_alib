@@ -346,17 +346,18 @@ public struct Rect: CustomStringConvertible, JsonConvertible {
             return [self.bottomLeft, self.topLeft, self.bottomRight, self.topRight]
         }
     }
+    public func strip(rotation: Double) -> [Point] {
+        let c = center
+        var points = strip
+        for i in 0..<points.count {
+            let p = points[i] - c
+            points[i] = Point(angle: p.angle + rotation, radius: p.length) + c
+        }
+        return points
+    }
     public var strip5: [Point] {
         let c = (topLeft + bottomLeft + topRight + bottomRight) * 0.25
         return [bottomLeft, c, topLeft, c, topRight, c, bottomRight, c, bottomLeft]
-    }
-    public func rotate(angle: Double, center: Point = .zero) -> [Point] {
-        var points = strip
-        for i in 0..<points.count {
-            let p = points[i] - center
-            points[i] = Point(angle: p.angle + angle, radius: p.length) + center
-        }
-        return points
     }
     public var surface: Double {
         return size.surface
