@@ -93,6 +93,7 @@ open class Graphics: NodeUI, @unchecked Sendable {
         render.draw(trianglestrip: p.count)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /*
     public func draw(
         rect: Rect, image: Bitmap, from: Rect? = nil, lut: Texture3D? = nil,
         blend: BlendMode = BlendMode.opaque, color: Color = Color.white,
@@ -124,6 +125,7 @@ open class Graphics: NodeUI, @unchecked Sendable {
         }
         render.draw(trianglestrip: 4)
     }
+    */
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public func draw(
         rect: Rect, image: Bitmap, from: Rect? = nil, lut: Texture3D? = nil,
