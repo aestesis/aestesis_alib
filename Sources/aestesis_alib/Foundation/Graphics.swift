@@ -94,9 +94,9 @@ open class Graphics: NodeUI, @unchecked Sendable {
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public func draw(
-        rect: Rect, image: Bitmap, from: Rect? = nil, lut: Texture3D? = nil,
+        rect: Rect, rotation: Double = 0, image: Bitmap, from: Rect? = nil,
+        imageRotation: Rotation = .none, lut: Texture3D? = nil,
         blend: BlendMode = BlendMode.opaque, color: Color = Color.white,
-        rotation: Double = 0, imageRotation: Rotation = .none
     ) {
         var wrap = false
         if lut == nil {
