@@ -334,7 +334,7 @@ public struct Rect: CustomStringConvertible, JsonConvertible {
     public var strip: [Point] {
         return [self.topLeft, self.bottomLeft, self.topRight, self.bottomRight]
     }
-    public func strip(_ rotation: Rotation) -> [Point] {
+    public func strip(rotation: Rotation) -> [Point] {
         switch rotation {
         case .none:
             return [self.topLeft, self.bottomLeft, self.topRight, self.bottomRight]
