@@ -347,6 +347,9 @@ public struct Rect: CustomStringConvertible, JsonConvertible {
         }
     }
     public func strip(rotation: Double) -> [Point] {
+        if rotation == 0 {
+            return strip
+        }
         let c = center
         var points = strip
         for i in 0..<points.count {
