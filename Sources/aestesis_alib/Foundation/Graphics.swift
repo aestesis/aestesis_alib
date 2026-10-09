@@ -112,7 +112,7 @@ open class Graphics: NodeUI, @unchecked Sendable {
             rs = r / image.size
             wrap = rs.left < 0 || rs.top < 0 || rs.right > 1 || rs.bottom > 1  // TODO: separate U and V wrap
         }
-        let uv = rs.strip(rotation)
+        let uv = rs.strip(rotation:rotation)
         for i in 0...3 {
             vert[i] = TextureVertice(
                 position: strip[i].infloat3, uv: uv[i].infloat2, color: color.infloat4)
@@ -176,7 +176,7 @@ open class Graphics: NodeUI, @unchecked Sendable {
             rs = r / image.size
             wrap = rs.left < 0 || rs.top < 0 || rs.right > 1 || rs.bottom > 1  // TODO: separate U and V wrap
         }
-        let uv = rs.strip(rotation)
+        let uv = rs.strip(rotation:rotation)
         for i in 0...3 {
             vert[i] = TextureVertice(
                 position: strip[i].infloat3, uv: uv[i].infloat2, color: color.infloat4)
@@ -218,8 +218,8 @@ open class Graphics: NodeUI, @unchecked Sendable {
         let cl = color.infloat4
         let strip = rect.strip
         let rs = Rect(x: 0, y: 0, w: 1, h: 1)
-        let uv = rs.strip(rotation)
-        let uvm = rs.strip(maskRotation)
+        let uv = rs.strip(rotation:rotation)
+        let uvm = rs.strip(rotation:maskRotation)
         for i in 0...3 {
             vert[i] = TextureMaskVertice(
                 position: strip[i].infloat3, uv: uv[i].infloat2, uvmask: uvm[i].infloat2, color: cl)
