@@ -383,7 +383,8 @@ open class Texture2D: NodeUI, @unchecked Sendable {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public init(
         parent: NodeUI, size: Size, scale: Size = Size(1, 1), border: Size = Size.zero,
-        format: Program.Format = .bgra, shared: Bool = false, file: String = #file, line: Int = #line
+        format: Program.Format = .bgra, shared: Bool = false, file: String = #file,
+        line: Int = #line
     ) {
         #if DEBUG
             self.dbgInfo = "Texture.init(file:'\(file)',line:\(line))"
@@ -581,9 +582,41 @@ open class Texture2D: NodeUI, @unchecked Sendable {
             Debug.error(AlibError("no texture", #file, #line))
         }
     }
+    public func set(pixels data: [SIMD4<Float>]) {
+        if let t = texture {
+            switch self.format {
+            case .float4:
+                assert(data.count == t.width * t.height)
+                data.withUnsafeBytes { bytes in
+                    t.replace(
+                        region: MTLRegion(
+                            origin: MTLOrigin(x: 0, y: 0, z: 0),
+                            size: MTLSize(width: t.width, height: t.height, depth: 1)),
+                        mipmapLevel: 0,
+                        withBytes: bytes.baseAddress!,
+                        bytesPerRow: t.width * MemoryLayout<SIMD4<Float>>.stride)
+                }
+            default:
+                Debug.error("invalid texture format", #file, #line)
+            }
+        } else {
+            Debug.error(AlibError("no texture", #file, #line))
+        }
+    }
     public func set(pixels data: [Float32]) {
         if let t = texture {
             switch self.format {
+            case .float4:
+                assert(data.count == t.width * t.height * 4)
+                data.withUnsafeBytes { bytes in
+                    t.replace(
+                        region: MTLRegion(
+                            origin: MTLOrigin(x: 0, y: 0, z: 0),
+                            size: MTLSize(width: t.width, height: t.height, depth: 1)),
+                        mipmapLevel: 0,
+                        withBytes: bytes.baseAddress!,
+                        bytesPerRow: t.width * MemoryLayout<Float32>.stride * 4)
+                }
             case .float2:
                 assert(data.count == t.width * t.height * 2)
                 data.withUnsafeBytes { bytes in

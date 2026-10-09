@@ -49,7 +49,7 @@ public class VideoWriter: @unchecked Sendable {
             mFormatFlags: kLinearPCMFormatFlagIsFloat | kAudioFormatFlagIsPacked
                 | kAudioFormatFlagsNativeEndian, mBytesPerPacket: UInt32(bytesPerPacket),
             mFramesPerPacket: 1, mBytesPerFrame: UInt32(bytesPerPacket),
-            
+
             mChannelsPerFrame: UInt32(nchan), mBitsPerChannel: UInt32(bytesPerChannel * 8),
             mReserved: 0)
     }
@@ -227,7 +227,7 @@ public class VideoWriter: @unchecked Sendable {
         }
     }
     private func audioSampleBuffer(timing: CMSampleTimingInfo, pcm: [Float]) throws
-    -> CMSampleBuffer
+        -> CMSampleBuffer
     {
         let format = try CMFormatDescription(
             audioStreamBasicDescription: audioStreamBasicDescription)

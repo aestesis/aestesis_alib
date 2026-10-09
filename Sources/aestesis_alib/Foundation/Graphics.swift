@@ -62,6 +62,13 @@ open class Graphics: NodeUI, @unchecked Sendable {
         return self["program.color.multiply"] != nil
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    public func wait(fence: MTLFence) {
+        render.wait(fence: fence)
+    }
+    public func update() -> MTLFence? {
+        return render.update()
+    }
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public func fill(rect: Rect, blend: BlendMode = BlendMode.opaque, color: Color) {
         program("program.color", blend: blend)
@@ -1652,6 +1659,10 @@ open class Graphics: NodeUI, @unchecked Sendable {
 public struct ColorVertice {
     var position: SIMD3<Float>
     var color: SIMD4<Float>
+    public init(position: SIMD3<Float>, color: SIMD4<Float>) {
+        self.position = position
+        self.color = color
+    }
 }
 public struct TextureVertice {
     var position: SIMD3<Float>

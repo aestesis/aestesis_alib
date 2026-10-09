@@ -350,7 +350,14 @@ public struct Rect: CustomStringConvertible, JsonConvertible {
         let c = (topLeft + bottomLeft + topRight + bottomRight) * 0.25
         return [bottomLeft, c, topLeft, c, topRight, c, bottomRight, c, bottomLeft]
     }
-
+    public func rotate(angle: Double, center: Point = .zero) -> [Point] {
+        var points = strip
+        for i in 0..<points.count {
+            let p = points[i] - center
+            points[i] = Point(angle: p.angle + angle, radius: p.length) + center
+        }
+        return points
+    }
     public var surface: Double {
         return size.surface
     }
