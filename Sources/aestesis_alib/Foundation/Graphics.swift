@@ -93,11 +93,10 @@ open class Graphics: NodeUI, @unchecked Sendable {
         render.draw(trianglestrip: p.count)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
-    /*
     public func draw(
         rect: Rect, image: Bitmap, from: Rect? = nil, lut: Texture3D? = nil,
         blend: BlendMode = BlendMode.opaque, color: Color = Color.white,
-        rotation: Rotation = Rotation.none
+        sourceRotation: Rotation = Rotation.none
     ) {
         var wrap = false
         if lut == nil {
@@ -113,7 +112,7 @@ open class Graphics: NodeUI, @unchecked Sendable {
             rs = r / image.size
             wrap = rs.left < 0 || rs.top < 0 || rs.right > 1 || rs.bottom > 1  // TODO: separate U and V wrap
         }
-        let uv = rs.strip(rotation: rotation)
+        let uv = rs.strip(rotation: sourceRotation)
         for i in 0...3 {
             vert[i] = TextureVertice(
                 position: strip[i].infloat3, uv: uv[i].infloat2, color: color.infloat4)
@@ -125,7 +124,6 @@ open class Graphics: NodeUI, @unchecked Sendable {
         }
         render.draw(trianglestrip: 4)
     }
-    */
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public func draw(
         rect: Rect, image: Bitmap, from: Rect? = nil, lut: Texture3D? = nil,
