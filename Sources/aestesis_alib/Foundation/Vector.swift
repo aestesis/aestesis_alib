@@ -69,7 +69,7 @@ import simd
         public func clamp(min vmin: Vec2, max vmax: Vec2) -> Vec2 {
             return simd.max(simd.min(self, vmax), vmin)
         }
-        public var normalized: Vec3 {
+        public var normalized: Vec2 {
             return normalize(self)
         }
         public var length: Double {
