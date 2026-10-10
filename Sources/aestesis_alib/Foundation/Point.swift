@@ -71,6 +71,9 @@ public struct Point: CustomStringConvertible, JsonConvertible, @unchecked Sendab
     public var length: Double {
         return sqrt(x * x + y * y)
     }
+    public var radius: Double {
+        return length
+    }
     public func lerp(_ to: Point, coef: Double) -> Point {
         return self + (to - self) * coef  // Point(to.x*coef+x*(1-coef),to.y*coef+y*(1-coef))
     }
