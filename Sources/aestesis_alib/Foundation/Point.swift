@@ -80,8 +80,8 @@ public struct Point: CustomStringConvertible, JsonConvertible, @unchecked Sendab
     public func lerp(_ to: Point, coef: Signal) -> Point {
         return self.lerp(to, coef: coef.value)
     }
-    public var normalize: Point {
-        return Point(x / length, y / length)
+    public var normalized: Point {
+        return Point(xy.normalized)
     }
     public func rect(w: Double, h: Double) -> Rect {
         return Rect(x: x - w * 0.5, y: y - h * 0.5, w: w, h: h)
@@ -106,6 +106,10 @@ public struct Point: CustomStringConvertible, JsonConvertible, @unchecked Sendab
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    public init(_ p: Vec2) {
+        x = p.x
+        y = p.y
+    }
     public init(_ p: Vec3) {
         x = p.x
         y = p.y
@@ -177,13 +181,13 @@ public func -= (left: inout Point, right: Point) {
     left = left - right
 }
 public func + (lhs: Point, rhs: Point) -> Point {
-    return Point((lhs.x + rhs.x), (lhs.y + rhs.y))
+    return Point(lhs.xy+rhs.xy)
 }
 public func - (lhs: Point, rhs: Point) -> Point {
-    return Point((lhs.x - rhs.x), (lhs.y - rhs.y))
+    return Point(lhs.xy-rhs.xy)
 }
 public prefix func - (lhs: Point) -> Point {
-    return Point(-lhs.x, -lhs.y)
+    return Point(-lhs.xy)
 }
 public func * (lhs: Point, rhs: Point) -> Point {
     return Point((lhs.x * rhs.x), (lhs.y * rhs.y))
