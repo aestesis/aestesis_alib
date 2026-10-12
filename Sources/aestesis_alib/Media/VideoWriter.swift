@@ -100,7 +100,7 @@ public class VideoWriter: @unchecked Sendable {
                     AVVideoWidthKey: size.width,
                     AVVideoHeightKey: size.height,
                     AVVideoCompressionPropertiesKey: [
-                        AVVideoAverageBitRateKey: size.surface * fps * 0.11,  // ~ 11% of the surface = 13.5MB/s at 1080p 60fps
+                        AVVideoAverageBitRateKey: size.area * fps * 0.11,  // ~ 11% of the surface = 13.5MB/s at 1080p 60fps
                         AVVideoExpectedSourceFrameRateKey: fps,
                         AVVideoMaxKeyFrameIntervalKey: fps,
                     ],

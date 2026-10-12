@@ -107,7 +107,7 @@ public struct Size: CustomStringConvertible, JsonConvertible {
     public func scale(_ w: Double, _ h: Double) -> Size {
         return Size(width * w, height * h)
     }
-    public var surface: Double {
+    public var area: Double {
         return width * height
     }
     public var transposed: Size {
@@ -246,7 +246,7 @@ public struct SizeI {
     public var point: PointI {
         return PointI(x: width, y: height)
     }
-    public var surface: Int {
+    public var area: Int {
         return width * height
     }
     public var description: String {

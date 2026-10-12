@@ -362,8 +362,8 @@ public struct Rect: CustomStringConvertible, JsonConvertible {
         let c = (topLeft + bottomLeft + topRight + bottomRight) * 0.25
         return [bottomLeft, c, topLeft, c, topRight, c, bottomRight, c, bottomLeft]
     }
-    public var surface: Double {
-        return size.surface
+    public var area: Double {
+        return size.area
     }
     public func translate(x: Double, y: Double) -> Rect {
         return Rect(o: Point(origin.x + x, origin.y + y), s: size)
