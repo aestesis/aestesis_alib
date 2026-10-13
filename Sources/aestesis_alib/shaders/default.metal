@@ -88,9 +88,13 @@ half3 hsv2rgb(half3 c) {
     return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
 }
 half brightness(half3 rgb) {
-    // sqrt( .299 R² + .587 G² + .114 B² )
     const half3 K = half3(0.299,0.587,0.114);
     half3 v = rgb*rgb*K;
+    return v.x+v.y+v.z;
+}
+float brightness_float(float3 rgb) {
+    const float3 K = float3(0.299,0.587,0.114);
+    float3 v = rgb*rgb*K;
     return v.x+v.y+v.z;
 }
 half3 brightness3(half3 rgb) {
@@ -554,6 +558,192 @@ fragment half4 textureBlendExclusion(TextureVertice v [[stage_in]], texture2d<ha
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
+// lumaKey
+struct LumaKeyParams {
+    float luma;
+};
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+half4 computeLuma(half4 color, LumaKeyParams p) {
+    half b = brightness(color.rgb)
+    if (p.luma>=0) {
+        half a = clamp((b - p.luma) * 1000.0, 0.0, 1.0);
+        if(a == 0.0) discard_fragment();
+        return half4(color.rgb, a*color.a);
+    } else {
+        half a = clamp((1 + b - p.luma) * -1000.0, 0.0, 1.0);
+        if(a == 0.0) discard_fragment();
+        return half4(color.rgb, a*color.a);
+    }
+}
+float4 computeLuma_float(float4 color, LumaKeyParams p) {
+    half b = brightness_float(color.rgb)
+    if (p.luma>=0) {
+        float a = clamp((b - p.luma) * 1000.0, 0.0, 1.0);
+        if(a == 0.0) discard_fragment();
+        return float4(color.rgb, a*color.a);
+    } else {
+        float a = clamp((1 + b - p.luma) * -1000.0, 0.0, 1.0);
+        if(a == 0.0) discard_fragment();
+        return float4(color.rgb, a*color.a);
+    }
+}
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+fragment half4 lumakeyFuncFragment(TextureVertice v [[stage_in]], texture2d<half> t [[texture(0)]], sampler s [[sampler(0)]], constant LumaKeyParams &p[[buffer(0)]]) {
+    half4 c=computeLuma(t.sample(s,v.uv), p);
+    return c*v.color;
+}
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+fragment float4 lumakeyFuncFragment_float(TextureVertice_float v [[stage_in]], texture2d<float> t [[texture(0)]], sampler s [[sampler(0)]], constant LumaKeyParams &p[[buffer(0)]]) {
+    float4 c = computeLuma_float(t.sample(s,v.uv), p);
+    return c*v.color;
+}
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+fragment half4 lumakeyLuma(TextureVertice v [[stage_in]], texture2d<half> t [[texture(0)]], sampler s [[sampler(0)]], constant LumaKeyParams &p[[buffer(0)]]) {
+    half4 c = computeLuma(t.sample(s,v.uv), p);
+    return half4(brightness3(c.rgb),c.a) * v.color;
+}
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+fragment half4 lumakeyBlendMultiply(TextureVertice v [[stage_in]], texture2d<half> t [[texture(0)]], sampler s [[sampler(0)]], half4 cb [[color(0)]], constant LumaKeyParams &p[[buffer(0)]]) {
+    half4 c = computeLuma(t.sample(s,v.uv), p);
+    half3 co = c.rgb * v.color.rgb;
+    half opa = c.a * v.color.a;
+    half3 blend = cb.rgb * co.rgb;
+    return half4(mix(cb.rgb,blend,opa),max(c.a,cb.a));
+}
+fragment half4 lumakeyBlendMultiplyLuma(TextureVertice v [[stage_in]], texture2d<half> t [[texture(0)]], sampler s [[sampler(0)]], half4 cb [[color(0)]], constant LumaKeyParams &p[[buffer(0)]]) {
+    half4 c = computeLuma(t.sample(s,v.uv), p);
+    half3 co = brightness(c.rgb) * v.color.rgb;
+    half opa = c.a * v.color.a;
+    half3 blend = cb.rgb * co.rgb;
+    return half4(mix(cb.rgb,blend,opa),max(c.a,cb.a));
+}
+fragment half4 lumakeyBlendScreen(TextureVertice v [[stage_in]], texture2d<half> t [[texture(0)]], sampler s [[sampler(0)]], half4 cb [[color(0)]], constant LumaKeyParams &p[[buffer(0)]]) {
+    half4 c = computeLuma(t.sample(s,v.uv), p);
+    half3 co = c.rgb * v.color.rgb;
+    half opa = c.a * v.color.a;
+    half3 blend = one-(one-cb.rgb)*(one-co.rgb);
+    return half4(mix(cb.rgb,blend,opa),max(c.a,cb.a));
+}
+fragment half4 lumakeyBlendOverlay(TextureVertice v [[stage_in]], texture2d<half> t [[texture(0)]], sampler s [[sampler(0)]], half4 cb [[color(0)]], constant LumaKeyParams &p[[buffer(0)]]) {
+    half4 c = computeLuma(t.sample(s,v.uv), p);
+    half3 co = c.rgb * v.color.rgb;
+    half opa = c.a * v.color.a;
+    half3 blend =  half3(mixOverlay(cb.r,co.r),mixOverlay(cb.g,co.g),mixOverlay(cb.b,co.b));
+    return half4(mix(cb.rgb,blend,opa),max(c.a,cb.a));
+}
+fragment half4 lumakeyBlendSoftLight(TextureVertice v [[stage_in]], texture2d<half> t [[texture(0)]], sampler s [[sampler(0)]], half4 cb [[color(0)]], constant LumaKeyParams &p[[buffer(0)]]) {
+    half4 c = computeLuma(t.sample(s,v.uv), p);
+    half3 co = c.rgb * v.color.rgb;
+    half opa = c.a * v.color.a;
+    half3 blend = (one-two*co.rgb)*cb.rgb*cb.rgb+two*co.rgb*cb.rgb;
+    return half4(mix(cb.rgb,blend,opa),max(c.a,cb.a));
+}
+fragment half4 lumakeyBlendLighten(TextureVertice v [[stage_in]], texture2d<half> t [[texture(0)]], sampler s [[sampler(0)]], half4 cb [[color(0)]], constant LumaKeyParams &p[[buffer(0)]]) {
+    half4 c = computeLuma(t.sample(s,v.uv), p);
+    half3 co = c.rgb * v.color.rgb;
+    half opa = c.a * v.color.a;
+    half3 blend = max(cb.rgb,co.rgb);
+    return half4(mix(cb.rgb,blend,opa),max(c.a,cb.a));
+}
+fragment half4 lumakeyBlendDarken(TextureVertice v [[stage_in]], texture2d<half> t [[texture(0)]], sampler s [[sampler(0)]], half4 cb [[color(0)]], constant LumaKeyParams &p[[buffer(0)]]) {
+    half4 c = computeLuma(t.sample(s,v.uv), p);
+    half3 co = c.rgb * v.color.rgb;
+    half opa = c.a * v.color.a;
+    half3 blend = min(cb.rgb,co.rgb);
+    return half4(mix(cb.rgb,blend,opa),max(c.a,cb.a));
+}
+fragment half4 lumakeyBlendAverage(TextureVertice v [[stage_in]], texture2d<half> t [[texture(0)]], sampler s [[sampler(0)]], half4 cb [[color(0)]], constant LumaKeyParams &p[[buffer(0)]]) {
+    half4 c = computeLuma(t.sample(s,v.uv), p);
+    half3 co = c.rgb * v.color.rgb;
+    half opa = c.a * v.color.a;
+    half3 blend = (cb.rgb + co.rgb) * 0.5;
+    return half4(mix(cb.rgb,blend,opa),max(c.a,cb.a));
+}
+fragment half4 lumakeyBlendSubstract(TextureVertice v [[stage_in]], texture2d<half> t [[texture(0)]], sampler s [[sampler(0)]], half4 cb [[color(0)]], constant LumaKeyParams &p[[buffer(0)]]) {
+    half4 c = computeLuma(t.sample(s,v.uv), p);
+    half3 co = c.rgb * v.color.rgb;
+    half opa = c.a * v.color.a;
+    return half4(cb.rgb+(co.rgb-one)*opa,max(c.a,cb.a));
+}
+fragment half4 lumakeyBlendDifference(TextureVertice v [[stage_in]], texture2d<half> t [[texture(0)]], sampler s [[sampler(0)]], half4 cb [[color(0)]], constant LumaKeyParams &p[[buffer(0)]]) {
+    half4 c = computeLuma(t.sample(s,v.uv), p);
+    half3 co = c.rgb * v.color.rgb;
+    half opa = c.a * v.color.a;
+    return half4(abs(cb.rgb-co.rgb*opa),max(c.a,cb.a));
+}
+fragment half4 lumakeyBlendNegation(TextureVertice v [[stage_in]], texture2d<half> t [[texture(0)]], sampler s [[sampler(0)]], half4 cb [[color(0)]], constant LumaKeyParams &p[[buffer(0)]]) {
+    half4 c = computeLuma(t.sample(s,v.uv), p);
+    half3 co = c.rgb * v.color.rgb;
+    half opa = c.a * v.color.a;
+    half3 blend = one-abs(one-cb.rgb-co.rgb);
+    return half4(mix(cb.rgb,blend,opa),max(c.a,cb.a));
+}
+fragment half4 lumakeyBlendColorDodge(TextureVertice v [[stage_in]], texture2d<half> t [[texture(0)]], sampler s [[sampler(0)]], half4 cb [[color(0)]], constant LumaKeyParams &p[[buffer(0)]]) {
+    half4 c = computeLuma(t.sample(s,v.uv), p);
+    half3 co = c.rgb * v.color.rgb;
+    half opa = c.a * v.color.a;
+    half3 blend =  min(one,half3(mixColorDodge(cb.r,co.r),mixColorDodge(cb.g,co.g),mixColorDodge(cb.b,co.b)));
+    return half4(mix(cb.rgb,blend,opa),max(c.a,cb.a));
+}
+fragment half4 lumakeyBlendColorBurn(TextureVertice v [[stage_in]], texture2d<half> t [[texture(0)]], sampler s [[sampler(0)]], half4 cb [[color(0)]], constant LumaKeyParams &p[[buffer(0)]]) {
+    half4 c = computeLuma(t.sample(s,v.uv), p);
+    half3 co = c.rgb * v.color.rgb;
+    half opa = c.a * v.color.a;
+    half3 blend =  max(zero,half3(mixColorBurn(cb.r,co.r),mixColorBurn(cb.g,co.g),mixColorBurn(cb.b,co.b)));
+    return half4(mix(cb.rgb,blend,opa),max(c.a,cb.a));
+}
+fragment half4 lumakeyBlendHardLight(TextureVertice v [[stage_in]], texture2d<half> t [[texture(0)]], sampler s [[sampler(0)]], half4 cb [[color(0)]], constant LumaKeyParams &p[[buffer(0)]]) {
+    half4 c = computeLuma(t.sample(s,v.uv), p);
+    half3 co = c.rgb * v.color.rgb;
+    half opa = c.a * v.color.a;
+    half3 blend =  half3(mixHardLight(cb.r,co.r),mixHardLight(cb.g,co.g),mixHardLight(cb.b,co.b));
+    return half4(mix(cb.rgb,blend,opa),max(c.a,cb.a));
+}
+fragment half4 lumakeyBlendLinearLight(TextureVertice v [[stage_in]], texture2d<half> t [[texture(0)]], sampler s [[sampler(0)]], half4 cb [[color(0)]], constant LumaKeyParams &p[[buffer(0)]]) {
+    half4 c = computeLuma(t.sample(s,v.uv), p);
+    half opa = c.a * v.color.a;
+    half3 co = c.rgb * v.color.rgb * opa;
+    half3 blend =  half3(mixLinearLight(cb.r,co.r),mixLinearLight(cb.g,co.g),mixLinearLight(cb.b,co.b));
+    return half4(blend,max(c.a,cb.a));
+}
+fragment half4 lumakeyBlendLinearBurn(TextureVertice v [[stage_in]], texture2d<half> t [[texture(0)]], sampler s [[sampler(0)]], half4 cb [[color(0)]], constant LumaKeyParams &p[[buffer(0)]]) {
+    half4 c = computeLuma(t.sample(s,v.uv), p);
+    half opa = c.a * v.color.a;
+    half3 co = c.rgb * v.color.rgb;
+    half3 blend =  half3(mixLinearBurn(cb.r,co.r,opa),mixLinearBurn(cb.g,co.g,opa),mixLinearBurn(cb.b,co.b,opa));
+    return half4(blend,max(c.a,cb.a));
+}
+fragment half4 lumakeyBlendReflect(TextureVertice v [[stage_in]], texture2d<half> t [[texture(0)]], sampler s [[sampler(0)]], half4 cb [[color(0)]], constant LumaKeyParams &p[[buffer(0)]]) {
+    half4 c = computeLuma(t.sample(s,v.uv), p);
+    half3 co = c.rgb * v.color.rgb;
+    half opa = c.a * v.color.a;
+    half3 blend = cb.rgb*cb.rgb/(half3(1.01,1.01,1.01)-co.rgb);
+    return half4(mix(cb.rgb,blend,opa),max(c.a,cb.a));
+}
+fragment half4 lumakeyBlendGlow(TextureVertice v [[stage_in]], texture2d<half> t [[texture(0)]], sampler s [[sampler(0)]], half4 cb [[color(0)]], constant LumaKeyParams &p[[buffer(0)]]) {
+    half4 c = computeLuma(t.sample(s,v.uv), p);
+    half3 co = c.rgb * v.color.rgb;
+    half opa = c.a * v.color.a;
+    half3 blend = co.rgb*co.rgb/(half3(1.01,1.01,1.01)-cb.rgb);
+    return half4(mix(cb.rgb,blend,opa),max(c.a,cb.a));
+}
+fragment half4 lumakeyBlendPhoenix(TextureVertice v [[stage_in]], texture2d<half> t [[texture(0)]], sampler s [[sampler(0)]], half4 cb [[color(0)]], constant LumaKeyParams &p[[buffer(0)]]) {
+    half4 c = computeLuma(t.sample(s,v.uv), p);
+    half3 co = c.rgb * v.color.rgb;
+    half opa = c.a * v.color.a;
+    half3 blend = min(cb.rgb,co.rgb)+max(cb.rgb,co.rgb)-one;
+    return half4(mix(cb.rgb,blend,opa),max(c.a,cb.a));
+}
+fragment half4 lumakeyBlendExclusion(TextureVertice v [[stage_in]], texture2d<half> t [[texture(0)]], sampler s [[sampler(0)]], half4 cb [[color(0)]], constant LumaKeyParams &p[[buffer(0)]]) {
+    half4 c = computeLuma(t.sample(s,v.uv), p);
+    half3 co = c.rgb * v.color.rgb;
+    half opa = c.a * v.color.a;
+    half3 blend = cb.rgb+co.rgb-2.0*cb.rgb*co.rgb;
+    return half4(mix(cb.rgb,blend,opa),max(c.a,cb.a));
+}
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
 struct BlurParams {
     float2 sigma;
 };
@@ -595,214 +785,6 @@ fragment half4 blurV(BlurVertice v [[stage_in]], texture2d<half> t [[texture(0)]
     }
     return c;
 }
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-struct BlendParams {
-    float opacity;
-};
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-struct BlendVerticeIn
-{
-    float3 position [[attribute(0)]];
-    float2 uv [[attribute(2)]];
-};
-struct BlendVertice {
-    float4 position [[position]];
-//    half4 color;
-    float2 uv;
-};
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-vertex BlendVertice blendFuncVertex(const device BlendVerticeIn *vin [[buffer(0)]],constant Uniforms &u [[buffer(1)]],uint vid [[vertex_id]])
-{
-    BlendVertice vout;
-    vout.position = u.matrix * float4(vin[vid].position, 1);
-    vout.uv = vin[vid].uv;
-    return vout;
-}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-fragment half4 blendMultiply(BlendVertice v [[stage_in]], texture2d<half> base [[texture(0)]], texture2d<half> over [[texture(1)]], sampler s [[sampler(0)]], constant BlendParams &p[[buffer(0)]])
-{
-    half4 cb=base.sample(s,v.uv);
-    half4 co=over.sample(s,v.uv);
-    half opa = co.a * p.opacity;
-    half3 blend = cb.rgb * co.rgb;
-    return half4(mix(cb.rgb,blend,opa),co.a);
-}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-fragment half4 blendScreen(BlendVertice v [[stage_in]], texture2d<half> base [[texture(0)]], texture2d<half> over [[texture(1)]], sampler s [[sampler(0)]], constant BlendParams &p[[buffer(0)]])
-{
-    half4 cb=base.sample(s,v.uv);
-    half4 co=over.sample(s,v.uv);
-    half opa = co.a * p.opacity;
-    half3 blend = one-(one-cb.rgb)*(one-co.rgb);
-    return half4(mix(cb.rgb,blend,opa),co.a);
-}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-fragment half4 blendOverlay(BlendVertice v [[stage_in]], texture2d<half> base [[texture(0)]], texture2d<half> over [[texture(1)]], sampler s [[sampler(0)]], constant BlendParams &p[[buffer(0)]])
-{
-    half4 cb=base.sample(s,v.uv);
-    half4 co=over.sample(s,v.uv);
-    half opa = co.a * p.opacity;
-    half3 blend =  half3(mixOverlay(cb.r,co.r),mixOverlay(cb.g,co.g),mixOverlay(cb.b,co.b));
-    return half4(mix(cb.rgb,blend,opa),co.a);
-}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-fragment half4 blendSoftLight(BlendVertice v [[stage_in]], texture2d<half> base [[texture(0)]], texture2d<half> over [[texture(1)]], sampler s [[sampler(0)]], constant BlendParams &p[[buffer(0)]])
-{
-    half4 cb=base.sample(s,v.uv);
-    half4 co=over.sample(s,v.uv);
-    half opa = co.a * p.opacity;
-    half3 blend = (one-two*co.rgb)*cb.rgb*cb.rgb+two*co.rgb*cb.rgb;
-    return half4(mix(cb.rgb,blend,opa),co.a);
-}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-fragment half4 blendAdd(BlendVertice v [[stage_in]], texture2d<half> base [[texture(0)]], texture2d<half> over [[texture(1)]], sampler s [[sampler(0)]], constant BlendParams &p[[buffer(0)]])
-{
-    half4 cb=base.sample(s,v.uv);
-    half4 co=over.sample(s,v.uv);
-    half opa = co.a * p.opacity;
-    return half4(cb.rgb + co.rgb * opa,co.a);
-}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-fragment half4 blendLighten(BlendVertice v [[stage_in]], texture2d<half> base [[texture(0)]], texture2d<half> over [[texture(1)]], sampler s [[sampler(0)]], constant BlendParams &p[[buffer(0)]])
-{
-    half4 cb=base.sample(s,v.uv);
-    half4 co=over.sample(s,v.uv);
-    half opa = co.a * p.opacity;
-    half3 blend = max(cb.rgb,co.rgb);
-    return half4(mix(cb.rgb,blend,opa),co.a);
-}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-fragment half4 blendDarken(BlendVertice v [[stage_in]], texture2d<half> base [[texture(0)]], texture2d<half> over [[texture(1)]], sampler s [[sampler(0)]], constant BlendParams &p[[buffer(0)]])
-{
-    half4 cb=base.sample(s,v.uv);
-    half4 co=over.sample(s,v.uv);
-    half opa = co.a * p.opacity;
-    half3 blend = min(cb.rgb,co.rgb);
-    return half4(mix(cb.rgb,blend,opa),co.a);
-}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-fragment half4 blendAverage(BlendVertice v [[stage_in]], texture2d<half> base [[texture(0)]], texture2d<half> over [[texture(1)]], sampler s [[sampler(0)]], constant BlendParams &p[[buffer(0)]])
-{
-    half4 cb=base.sample(s,v.uv);
-    half4 co=over.sample(s,v.uv);
-    half opa = co.a * p.opacity;
-    half3 blend = (cb.rgb + co.rgb) * 0.5;
-    return half4(mix(cb.rgb,blend,opa),co.a);
-}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-fragment half4 blendSubstract(BlendVertice v [[stage_in]], texture2d<half> base [[texture(0)]], texture2d<half> over [[texture(1)]], sampler s [[sampler(0)]], constant BlendParams &p[[buffer(0)]])
-{
-    half4 cb=base.sample(s,v.uv);
-    half4 co=over.sample(s,v.uv);
-    half opa = co.a * p.opacity;
-    return half4(cb.rgb+(co.rgb-one)*opa,co.a);
-}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-fragment half4 blendDifference(BlendVertice v [[stage_in]], texture2d<half> base [[texture(0)]], texture2d<half> over [[texture(1)]], sampler s [[sampler(0)]], constant BlendParams &p[[buffer(0)]])
-{
-    half4 cb=base.sample(s,v.uv);
-    half4 co=over.sample(s,v.uv);
-    half opa = co.a * p.opacity;
-    return half4(abs(cb.rgb-co.rgb*opa),co.a);
-}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-fragment half4 blendNegation(BlendVertice v [[stage_in]], texture2d<half> base [[texture(0)]], texture2d<half> over [[texture(1)]], sampler s [[sampler(0)]], constant BlendParams &p[[buffer(0)]])
-{
-    half4 cb=base.sample(s,v.uv);
-    half4 co=over.sample(s,v.uv);
-    half opa = co.a * p.opacity;
-    half3 blend = one-abs(one-cb.rgb-co.rgb);
-    return half4(mix(cb.rgb,blend,opa),co.a);
-}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-fragment half4 blendColorDodge(BlendVertice v [[stage_in]], texture2d<half> base [[texture(0)]], texture2d<half> over [[texture(1)]], sampler s [[sampler(0)]], constant BlendParams &p[[buffer(0)]])
-{
-    half4 cb=base.sample(s,v.uv);
-    half4 co=over.sample(s,v.uv);
-    half opa = co.a * p.opacity;
-    half3 blend =  min(one,half3(mixColorDodge(cb.r,co.r),mixColorDodge(cb.g,co.g),mixColorDodge(cb.b,co.b)));
-    return half4(mix(cb.rgb,blend,opa),co.a);
-}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-fragment half4 blendColorBurn(BlendVertice v [[stage_in]], texture2d<half> base [[texture(0)]], texture2d<half> over [[texture(1)]], sampler s [[sampler(0)]], constant BlendParams &p[[buffer(0)]])
-{
-    half4 cb=base.sample(s,v.uv);
-    half4 co=over.sample(s,v.uv);
-    half opa = co.a * p.opacity;
-    half3 blend =  max(zero,half3(mixColorBurn(cb.r,co.r),mixColorBurn(cb.g,co.g),mixColorBurn(cb.b,co.b)));
-    return half4(mix(cb.rgb,blend,opa),co.a);
-}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-fragment half4 blendHardLight(BlendVertice v [[stage_in]], texture2d<half> base [[texture(0)]], texture2d<half> over [[texture(1)]], sampler s [[sampler(0)]], constant BlendParams &p[[buffer(0)]])
-{
-    half4 cb=base.sample(s,v.uv);
-    half4 co=over.sample(s,v.uv);
-    half opa = co.a * p.opacity;
-    half3 blend =  half3(mixHardLight(cb.r,co.r),mixHardLight(cb.g,co.g),mixHardLight(cb.b,co.b));
-    return half4(mix(cb.rgb,blend,opa),co.a);
-}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-fragment half4 blendLinearLight(BlendVertice v [[stage_in]], texture2d<half> base [[texture(0)]], texture2d<half> over [[texture(1)]], sampler s [[sampler(0)]], constant BlendParams &p[[buffer(0)]])
-{
-    half4 cb=base.sample(s,v.uv);
-    half4 co=over.sample(s,v.uv);
-    half opa = co.a * p.opacity;
-    half3 blend =  half3(mixLinearLight(cb.r,co.r),mixLinearLight(cb.g,co.g),mixLinearLight(cb.b,co.b));
-    return half4(mix(cb.rgb,blend,opa),co.a);
-}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-fragment half4 blendLinearBurn(BlendVertice v [[stage_in]], texture2d<half> base [[texture(0)]], texture2d<half> over [[texture(1)]], sampler s [[sampler(0)]], constant BlendParams &p[[buffer(0)]])
-{
-    half4 cb=base.sample(s,v.uv);
-    half4 co=over.sample(s,v.uv);
-    half opa = co.a * p.opacity;
-    half3 blend =  half3(mixLinearBurn(cb.r,co.r,opa),mixLinearBurn(cb.g,co.g,opa),mixLinearBurn(cb.b,co.b,opa));
-    return half4(blend,co.a);
-}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-fragment half4 blendReflect(BlendVertice v [[stage_in]], texture2d<half> base [[texture(0)]], texture2d<half> over [[texture(1)]], sampler s [[sampler(0)]], constant BlendParams &p[[buffer(0)]])
-{
-    half4 cb=base.sample(s,v.uv);
-    half4 co=over.sample(s,v.uv);
-    half opa = co.a * p.opacity;
-    half3 blend = cb.rgb*cb.rgb/(half3(1.01,1.01,1.01)-co.rgb);
-    return half4(mix(cb.rgb,blend,opa),co.a);}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-fragment half4 blendGlow(BlendVertice v [[stage_in]], texture2d<half> base [[texture(0)]], texture2d<half> over [[texture(1)]], sampler s [[sampler(0)]], constant BlendParams &p[[buffer(0)]])
-{
-    half4 cb=base.sample(s,v.uv);
-    half4 co=over.sample(s,v.uv);
-    half opa = co.a * p.opacity;
-    half3 blend = co.rgb*co.rgb/(half3(1.01,1.01,1.01)-cb.rgb);
-    return half4(mix(cb.rgb,blend,opa),co.a);}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-fragment half4 blendPhoenix(BlendVertice v [[stage_in]], texture2d<half> base [[texture(0)]], texture2d<half> over [[texture(1)]], sampler s [[sampler(0)]], constant BlendParams &p[[buffer(0)]])
-{
-    half4 cb=base.sample(s,v.uv);
-    half4 co=over.sample(s,v.uv);
-    half opa = co.a * p.opacity;
-    half3 blend = min(cb.rgb,co.rgb)+max(cb.rgb,co.rgb)-one;
-    return half4(mix(cb.rgb,blend,opa),co.a);}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-fragment half4 blendSub(BlendVertice v [[stage_in]], texture2d<half> base [[texture(0)]], texture2d<half> over [[texture(1)]], sampler s [[sampler(0)]], constant BlendParams &p[[buffer(0)]])
-{
-    half4 cb=base.sample(s,v.uv);
-    half4 co=over.sample(s,v.uv);
-    half opa = co.a * p.opacity;
-    return half4(cb.rgb-co.rgb*opa,co.a);
-}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-fragment half4 blendExclusion(BlendVertice v [[stage_in]], texture2d<half> base [[texture(0)]], texture2d<half> over [[texture(1)]], sampler s [[sampler(0)]], constant BlendParams &p[[buffer(0)]])
-{
-    half4 cb=base.sample(s,v.uv);
-    half4 co=over.sample(s,v.uv);
-    half opa = co.a * p.opacity;
-    half3 blend = cb.rgb+co.rgb-2.0*cb.rgb*co.rgb;
-    return half4(mix(cb.rgb,blend,opa),co.a);}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////

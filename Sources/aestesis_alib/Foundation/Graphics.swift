@@ -93,6 +93,45 @@ open class Graphics: NodeUI, @unchecked Sendable {
         render.draw(trianglestrip: p.count)
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct TextureLumaKeyParameters {
+        internal init(luma: Double) {
+            self.luma = Float(luma)
+        }
+        var luma: Float
+    }
+    public func draw(
+        rect: Rect, rotation: Double = 0, image: Bitmap, from: Rect? = nil,
+        imageRotation: Rotation = .none,
+        blend: BlendMode = BlendMode.opaque, color: Color = Color.white, lumaKey: Double = 0
+    ) {
+        var wrap = false
+        if lumaKey != 0 {
+            program("program.lumakey", blend: blend)
+            let b = buffer(MemoryLayout<TextureLumaKeyParameters>.stride)
+            let ptr = b.ptr.assumingMemoryBound(to: TextureLumaKeyParameters.self)
+            ptr[0] = TextureLumaKeyParameters(luma: lumaKey)
+            render.use(fragmentBuffer: b, atIndex: 0)
+        } else {
+            program("program.texture", blend: blend)
+        }
+        uniforms(matrix)
+        let vert = textureVertices(4)
+        let strip = rect.strip(rotation: rotation)
+        var rs = Rect(x: 0, y: 0, w: 1, h: 1)
+        if let r = from {
+            rs = r / image.size
+            wrap = rs.left < 0 || rs.top < 0 || rs.right > 1 || rs.bottom > 1  // TODO: separate U and V wrap
+        }
+        let uv = rs.strip(rotation: imageRotation)
+        for i in 0...3 {
+            vert[i] = TextureVertice(
+                position: strip[i].infloat3, uv: uv[i].infloat2, color: color.infloat4)
+        }
+        sampler(wrap ? "sampler.wrap" : "sampler.clamp")
+        render.use(texture: image)
+        render.draw(trianglestrip: 4)
+    }
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////
     public func draw(
         rect: Rect, rotation: Double = 0, image: Bitmap, from: Rect? = nil,
         imageRotation: Rotation = .none, lut: Texture3D? = nil,
@@ -1361,6 +1400,57 @@ open class Graphics: NodeUI, @unchecked Sendable {
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     static func globals(_ viewport: Viewport) {
+        globalsColor(viewport)
+        globalsTexture(viewport)
+        globalsLumaKey(viewport)
+        Program.populateDefaultBlendModes(
+            store: viewport, key: "program.texture.mask", library: viewport.gpu.library,
+            vertex: "textureFuncVertex", fragment: "textureMaskFragment",
+            vertexFormat: [.float3, .float4, .float2])
+        Program.populateDefaultBlendModes(
+            store: viewport, key: "program.texture.bitmap.mask", library: viewport.gpu.library,
+            vertex: "textureBitmapMaskFuncVertex", fragment: "textureBitmapMaskFragment",
+            vertexFormat: [.float3, .float4, .float2])
+        Program.populateDefaultBlendModes(
+            store: viewport, key: "program.gradient.mask", library: viewport.gpu.library,
+            vertex: "textureBitmapMaskFuncVertex", fragment: "textureGradientMaskFragment",
+            vertexFormat: [.float3, .float4, .float2])
+        viewport["program.blur.horizontal.copy"] = Program(
+            viewport: viewport, vertex: "blurFuncVertex", fragment: "blurH", blend: BlendMode.copy,
+            vertexFormat: [.float3, .float2])
+        viewport["program.blur.vertical.copy"] = Program(
+            viewport: viewport, vertex: "blurFuncVertex", fragment: "blurV", blend: BlendMode.copy,
+            vertexFormat: [.float3, .float2])
+        Program.populateDefaultBlendModes(
+            store: viewport, key: "program.lut", library: viewport.gpu.library,
+            vertex: "textureFuncVertex", fragment: "textureLutFragment",
+            vertexFormat: [.float3, .float4, .float2])
+        Program.populateDefaultBlendModes(
+            store: viewport, key: "program.gradient", library: viewport.gpu.library,
+            vertex: "textureFuncVertex", fragment: "gradientFragment",
+            vertexFormat: [.float3, .float4, .float2])
+        Program.populateDefaultBlendModes(
+            store: viewport, key: "program.gradient.height", library: viewport.gpu.library,
+            vertex: "textureFuncVertex", fragment: "gradientHeightFragment",
+            vertexFormat: [.float3, .float4, .float2])
+
+        viewport["sampler.clamp"] = Sampler(
+            viewport: viewport, modeX: Sampler.Mode.clamp, modeY: Sampler.Mode.clamp)
+        viewport["sampler.wrap"] = Sampler(
+            viewport: viewport, modeX: Sampler.Mode.wrap, modeY: Sampler.Mode.wrap)
+        viewport["sampler.mirror"] = Sampler(
+            viewport: viewport, modeX: Sampler.Mode.mirror, modeY: Sampler.Mode.mirror)
+        viewport["sampler.clamp.wrap"] = Sampler(
+            viewport: viewport, modeX: Sampler.Mode.clamp, modeY: Sampler.Mode.wrap)
+        viewport["sampler.wrap.clamp"] = Sampler(
+            viewport: viewport, modeX: Sampler.Mode.wrap, modeY: Sampler.Mode.clamp)
+        viewport["sampler.mirror.clamp"] = Sampler(
+            viewport: viewport, modeX: Sampler.Mode.mirror, modeY: Sampler.Mode.clamp)
+        viewport["sampler.clamp.mirror"] = Sampler(
+            viewport: viewport, modeX: Sampler.Mode.clamp, modeY: Sampler.Mode.mirror)
+        viewport["font.default"] = Font(parent: viewport, name: "Helvetica", size: 24)
+    }
+    static func globalsColor(_ viewport: Viewport) {
         viewport["program.color.copy"] = Program(
             viewport: viewport, vertex: "colorFuncVertex", fragment: "colorFuncFragment",
             blend: BlendMode.copy, vertexFormat: [.float3, .float4])
@@ -1438,6 +1528,8 @@ open class Graphics: NodeUI, @unchecked Sendable {
                 viewport: viewport, vertex: "colorFuncVertex", fragment: "colorBlendExclusion",
                 blend: BlendMode.opaque, vertexFormat: [.float3, .float4])
         #endif
+    }
+    static func globalsTexture(_ viewport: Viewport) {
         viewport["program.texture.copy"] = Program(
             viewport: viewport, vertex: "textureFuncVertex", fragment: "textureFuncFragment",
             floatShaders: true, blend: BlendMode.copy, vertexFormat: [.float3, .float4, .float2])
@@ -1465,9 +1557,6 @@ open class Graphics: NodeUI, @unchecked Sendable {
                 viewport: viewport, vertex: "textureFuncVertex",
                 fragment: "textureFuncFragmentMulAlpha", blend: BlendMode.setAlpha,
                 vertexFormat: [.float3, .float4, .float2])
-            viewport["program.texture.multiply"] = Program(
-                viewport: viewport, vertex: "textureFuncVertex", fragment: "textureBlendMultiply",
-                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
             viewport["program.texture.luma"] = Program(
                 viewport: viewport, vertex: "textureFuncVertex", fragment: "textureLuma",
                 blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
@@ -1484,6 +1573,9 @@ open class Graphics: NodeUI, @unchecked Sendable {
                 viewport: viewport, vertex: "textureFuncVertex",
                 fragment: "textureBlendMultiplyLuma", blend: BlendMode.opaque,
                 vertexFormat: [.float3, .float4, .float2])
+            viewport["program.texture.multiply"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "textureBlendMultiply",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
             viewport["program.texture.screen"] = Program(
                 viewport: viewport, vertex: "textureFuncVertex", fragment: "textureBlendScreen",
                 blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
@@ -1540,115 +1632,99 @@ open class Graphics: NodeUI, @unchecked Sendable {
                 viewport: viewport, vertex: "textureFuncVertex", fragment: "textureBlendExclusion",
                 blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
         #endif
-        Program.populateDefaultBlendModes(
-            store: viewport, key: "program.texture.mask", library: viewport.gpu.library,
-            vertex: "textureFuncVertex", fragment: "textureMaskFragment",
-            vertexFormat: [.float3, .float4, .float2])
-        Program.populateDefaultBlendModes(
-            store: viewport, key: "program.texture.bitmap.mask", library: viewport.gpu.library,
-            vertex: "textureBitmapMaskFuncVertex", fragment: "textureBitmapMaskFragment",
-            vertexFormat: [.float3, .float4, .float2])
-        Program.populateDefaultBlendModes(
-            store: viewport, key: "program.gradient.mask", library: viewport.gpu.library,
-            vertex: "textureBitmapMaskFuncVertex", fragment: "textureGradientMaskFragment",
-            vertexFormat: [.float3, .float4, .float2])
-        viewport["program.blur.horizontal.copy"] = Program(
-            viewport: viewport, vertex: "blurFuncVertex", fragment: "blurH", blend: BlendMode.copy,
-            vertexFormat: [.float3, .float2])
-        viewport["program.blur.vertical.copy"] = Program(
-            viewport: viewport, vertex: "blurFuncVertex", fragment: "blurV", blend: BlendMode.copy,
-            vertexFormat: [.float3, .float2])
-        viewport["sampler.clamp"] = Sampler(
-            viewport: viewport, modeX: Sampler.Mode.clamp, modeY: Sampler.Mode.clamp)
-        viewport["sampler.wrap"] = Sampler(
-            viewport: viewport, modeX: Sampler.Mode.wrap, modeY: Sampler.Mode.wrap)
-        viewport["sampler.mirror"] = Sampler(
-            viewport: viewport, modeX: Sampler.Mode.mirror, modeY: Sampler.Mode.mirror)
-        viewport["sampler.clamp.wrap"] = Sampler(
-            viewport: viewport, modeX: Sampler.Mode.clamp, modeY: Sampler.Mode.wrap)
-        viewport["sampler.wrap.clamp"] = Sampler(
-            viewport: viewport, modeX: Sampler.Mode.wrap, modeY: Sampler.Mode.clamp)
-        viewport["sampler.mirror.clamp"] = Sampler(
-            viewport: viewport, modeX: Sampler.Mode.mirror, modeY: Sampler.Mode.clamp)
-        viewport["sampler.clamp.mirror"] = Sampler(
-            viewport: viewport, modeX: Sampler.Mode.clamp, modeY: Sampler.Mode.mirror)
-        viewport["font.default"] = Font(parent: viewport, name: "Helvetica", size: 24)
-
-        viewport["program.blend.multiply"] = Program(
-            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendMultiply",
-            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
-        viewport["program.blend.screen"] = Program(
-            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendScreen",
-            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
-        viewport["program.blend.overlay"] = Program(
-            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendOverlay",
-            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
-        viewport["program.blend.softlight"] = Program(
-            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendSoftLight",
-            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
-        viewport["program.blend.add"] = Program(
-            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendAdd",
-            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
-        viewport["program.blend.lighten"] = Program(
-            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendLighten",
-            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
-        viewport["program.blend.darken"] = Program(
-            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendDarken",
-            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
-        viewport["program.blend.average"] = Program(
-            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendAverage",
-            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
-        viewport["program.blend.substract"] = Program(
-            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendSubstract",
-            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
-        viewport["program.blend.difference"] = Program(
-            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendDifference",
-            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
-        viewport["program.blend.negation"] = Program(
-            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendNegation",
-            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
-        viewport["program.blend.colordodge"] = Program(
-            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendColorDodge",
-            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
-        viewport["program.blend.colorburn"] = Program(
-            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendColorBurn",
-            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
-        viewport["program.blend.hardlight"] = Program(
-            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendHardLight",
-            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
-        viewport["program.blend.linearlight"] = Program(
-            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendLinearLight",
-            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
-        viewport["program.blend.linearburn"] = Program(
-            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendLinearBurn",
-            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
-        viewport["program.blend.reflect"] = Program(
-            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendReflect",
-            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
-        viewport["program.blend.glow"] = Program(
-            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendGlow",
-            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
-        viewport["program.blend.phoenix"] = Program(
-            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendPhoenix",
-            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
-        viewport["program.blend.sub"] = Program(
-            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendSub",
-            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
-        viewport["program.blend.exclusion"] = Program(
-            viewport: viewport, vertex: "blendFuncVertex", fragment: "blendExclusion",
-            blend: BlendMode.opaque, vertexFormat: [.float3, .float2])
-        Program.populateDefaultBlendModes(
-            store: viewport, key: "program.lut", library: viewport.gpu.library,
-            vertex: "textureFuncVertex", fragment: "textureLutFragment",
-            vertexFormat: [.float3, .float4, .float2])
-        Program.populateDefaultBlendModes(
-            store: viewport, key: "program.gradient", library: viewport.gpu.library,
-            vertex: "textureFuncVertex", fragment: "gradientFragment",
-            vertexFormat: [.float3, .float4, .float2])
-        Program.populateDefaultBlendModes(
-            store: viewport, key: "program.gradient.height", library: viewport.gpu.library,
-            vertex: "textureFuncVertex", fragment: "gradientHeightFragment",
-            vertexFormat: [.float3, .float4, .float2])
+    }
+    static func globalsLumaKey(_ viewport: Viewport) {
+        viewport["program.lumakey.copy"] = Program(
+            viewport: viewport, vertex: "textureFuncVertex", fragment: "lumakeyFuncFragment",
+            floatShaders: true, blend: BlendMode.copy, vertexFormat: [.float3, .float4, .float2])
+        viewport["program.lumakey.opaque"] = Program(
+            viewport: viewport, vertex: "textureFuncVertex", fragment: "lumakeyFuncFragment",
+            floatShaders: true, blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+        viewport["program.lumakey.alpha"] = Program(
+            viewport: viewport, vertex: "textureFuncVertex", fragment: "lumakeyFuncFragment",
+            floatShaders: true, blend: BlendMode.alpha, vertexFormat: [.float3, .float4, .float2])
+        viewport["program.lumakey.add"] = Program(
+            viewport: viewport, vertex: "textureFuncVertex", fragment: "lumakeyFuncFragment",
+            floatShaders: true, blend: BlendMode.add, vertexFormat: [.float3, .float4, .float2])
+        viewport["program.lumakey.sub"] = Program(
+            viewport: viewport, vertex: "textureFuncVertex", fragment: "lumakeyFuncFragment",
+            floatShaders: true, blend: BlendMode.sub, vertexFormat: [.float3, .float4, .float2])
+        #if os(tvOS) || os(iOS) || os(macOS)
+            viewport["program.lumakey.luma"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "lumakeyLuma",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.lumakey.luma.alpha"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "lumakeyLuma",
+                blend: BlendMode.alpha, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.lumakey.luma.add"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "lumakeyLuma",
+                blend: BlendMode.add, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.lumakey.luma.sub"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "lumakeyLuma",
+                blend: BlendMode.sub, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.lumakey.luma.multiply"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex",
+                fragment: "textureBlendMultiplyLuma", blend: BlendMode.opaque,
+                vertexFormat: [.float3, .float4, .float2])
+            viewport["program.lumakey.multiply"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "lumakeyBlendMultiply",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.lumakey.screen"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "lumakeyBlendScreen",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.lumakey.overlay"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "lumakeyBlendOverlay",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.lumakey.softlight"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "lumakeyBlendSoftLight",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.lumakey.lighten"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "lumakeyBlendLighten",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.lumakey.darken"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "lumakeyBlendDarken",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.lumakey.average"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "lumakeyBlendAverage",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.lumakey.substract"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "lumakeyBlendSubstract",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.lumakey.difference"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "lumakeyBlendDifference",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.lumakey.negation"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "lumakeyBlendNegation",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.lumakey.colordodge"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "lumakeyBlendColorDodge",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.lumakey.colorburn"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "lumakeyBlendColorBurn",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.lumakey.hardlight"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "lumakeyBlendHardLight",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.lumakey.linearlight"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex",
+                fragment: "lumakeyBlendLinearLight", blend: BlendMode.opaque,
+                vertexFormat: [.float3, .float4, .float2])
+            viewport["program.lumakey.linearburn"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "lumakeyBlendLinearBurn",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.lumakey.reflect"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "lumakeyBlendReflect",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.lumakey.glow"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "lumakeyBlendGlow",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.lumakey.phoenix"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "lumakeyBlendPhoenix",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+            viewport["program.lumakey.exclusion"] = Program(
+                viewport: viewport, vertex: "textureFuncVertex", fragment: "lumakeyBlendExclusion",
+                blend: BlendMode.opaque, vertexFormat: [.float3, .float4, .float2])
+        #endif
     }
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////////////////
