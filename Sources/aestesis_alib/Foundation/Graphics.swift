@@ -102,7 +102,7 @@ open class Graphics: NodeUI, @unchecked Sendable {
     public func draw(
         rect: Rect, rotation: Double = 0, image: Bitmap, from: Rect? = nil,
         imageRotation: Rotation = .none,
-        blend: BlendMode = BlendMode.opaque, color: Color = Color.white, lumaKey: Double = 0
+        blend: BlendMode = BlendMode.opaque, color: Color = Color.white, lumaKey: Double
     ) {
         var wrap = false
         if lumaKey != 0 {

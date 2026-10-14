@@ -564,7 +564,7 @@ struct LumaKeyParams {
 };
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 half4 computeLuma(half4 color, LumaKeyParams p) {
-    half b = brightness(color.rgb)
+    half b = brightness(color.rgb);
     if (p.luma>=0) {
         half a = clamp((b - p.luma) * 1000.0, 0.0, 1.0);
         if(a == 0.0) discard_fragment();
@@ -576,7 +576,7 @@ half4 computeLuma(half4 color, LumaKeyParams p) {
     }
 }
 float4 computeLuma_float(float4 color, LumaKeyParams p) {
-    half b = brightness_float(color.rgb)
+    half b = brightness_float(color.rgb);
     if (p.luma>=0) {
         float a = clamp((b - p.luma) * 1000.0, 0.0, 1.0);
         if(a == 0.0) discard_fragment();
