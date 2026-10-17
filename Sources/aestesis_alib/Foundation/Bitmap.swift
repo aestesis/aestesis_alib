@@ -192,6 +192,44 @@ open class Bitmap: Texture2D, @unchecked Sendable {
         cb.waitUntilCompleted()
     }
 
+    public func copy(source: Bitmap, fence: MTLFence, _ onDone: (@Sendable () -> Void)? = nil)
+        -> MTLFence?
+    {
+        guard size == source.size else {
+            fatalError("Bitmap.copy() no size match")
+        }
+        guard let viewport = viewport, let st = source.texture, let dt = texture,
+            let cb = viewport.gpu.queue.makeCommandBuffer()
+        else {
+            return nil
+        }
+        let blitCommandEncoder = cb.makeBlitCommandEncoder()!
+        blitCommandEncoder.waitForFence(fence)
+        blitCommandEncoder.copy(
+            from: st,
+            sourceSlice: 0,
+            sourceLevel: 0,
+            sourceOrigin: MTLOriginMake(0, 0, 0),
+            sourceSize: MTLSizeMake(st.width, st.height, 1),
+            to: dt,
+            destinationSlice: 0,
+            destinationLevel: 0,
+            destinationOrigin: MTLOriginMake(0, 0, 0))
+
+        let fence = viewport.gpu.device.makeFence()
+        if let fence = fence {
+            blitCommandEncoder.updateFence(fence)
+        }
+        blitCommandEncoder.endEncoding()
+        if let onDone = onDone {
+            cb.addCompletedHandler { encoder in
+                onDone()
+            }
+        }
+        cb.commit()
+        return fence
+    }
+
     public func copy() throws -> Bitmap {
         guard let parent = parent as? NodeUI else {
             throw AlibError("Bitmap.copy() source bitmap detached")
