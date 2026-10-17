@@ -223,10 +223,11 @@ open class Bitmap: Texture2D, @unchecked Sendable {
         blitCommandEncoder.endEncoding()
         if let onDone = onDone {
             cb.addCompletedHandler { encoder in
-            if encoder.status == .completed {
-                onDone()
-            } else if let error = encoder.error {
-                Debug.info(error)
+                if encoder.status == .completed {
+                    onDone()
+                } else if let error = encoder.error {
+                    Debug.info(error)
+                }
             }
         }
         cb.commit()
@@ -241,8 +242,8 @@ open class Bitmap: Texture2D, @unchecked Sendable {
         b.copy(source: self)
         return b
     }
-
 }
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
