@@ -567,11 +567,9 @@ half4 computeLuma(half4 color, LumaKeyParams p) {
     half b = brightness(color.rgb);
     if (p.luma>=0) {
         half a = clamp((b - p.luma) * 100.0, 0.0, 1.0);
-        if(a == 0.0) discard_fragment();
         return half4(color.rgb, a*color.a);
     } else {
-        half a = clamp((b + p.luma) * -100.0, 0.0, 1.0);
-        if(a == 0.0) discard_fragment();
+        half a = clamp((b - (1 + p.luma)) * -100.0, 0.0, 1.0);
         return half4(color.rgb, a*color.a);
     }
 }
@@ -579,11 +577,9 @@ float4 computeLuma_float(float4 color, LumaKeyParams p) {
     half b = brightness_float(color.rgb);
     if (p.luma>=0) {
         float a = clamp((b - p.luma) * 100.0, 0.0, 1.0);
-        if(a == 0.0) discard_fragment();
         return float4(color.rgb, a*color.a);
     } else {
-        float a = clamp((b + p.luma) * -100.0, 0.0, 1.0);
-        if(a == 0.0) discard_fragment();
+        float a = clamp((b - (1 + p.luma)) * -100.0, 0.0, 1.0);
         return float4(color.rgb, a*color.a);
     }
 }
