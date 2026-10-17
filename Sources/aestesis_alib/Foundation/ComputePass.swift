@@ -43,7 +43,7 @@ public class ComputePass: NodeUI, @unchecked Sendable {
         encoder.endEncoding()
         cb.commit()
     }
-    public func wait(fence:MTLFence) {
+    public func wait(fence: MTLFence) {
         encoder.waitForFence(fence)
     }
     public func update() -> MTLFence? {
