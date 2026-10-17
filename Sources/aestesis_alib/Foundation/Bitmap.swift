@@ -151,6 +151,21 @@ open class Bitmap: Texture2D, @unchecked Sendable {
         cb.commit()
         cb.waitUntilCompleted()
     }
+    public func gaussianBlur(source: Bitmap, sigma: Double, fence: MTLFence) -> MTLFence? {
+        guard let viewport = viewport, let st = source.texture,
+            let dt = texture,
+            let cb = viewport.gpu.queue.makeCommandBuffer()
+        else {
+            return nil
+        }
+        let cpi = ComputePass(parent: viewport)
+        cpi.wait(fence: fence)
+        let gaussian = MPSImageGaussianBlur(device: viewport.gpu.device, sigma: Float(sigma))
+        gaussian.encode(commandBuffer: cb, sourceTexture: st, destinationTexture: dt)
+        cb.commit()
+        let cpo = ComputePass(parent: viewport)
+        return cpo.update()
+    }
 
     public func copy(source: Bitmap) {
         guard size == source.size else {
